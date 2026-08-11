@@ -16,14 +16,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Fontshare CDN for Satoshi font */}
         <link 
           href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" 
-          rel="stylesheet" 
-        />
-        {/* CDN for Integral CF font */}
-        <link 
-          href="https://fonts.cdnfonts.com/css/integral-cf" 
           rel="stylesheet" 
         />
       </head>

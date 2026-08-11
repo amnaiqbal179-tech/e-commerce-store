@@ -1,13 +1,21 @@
 @import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
-@import url('https://fonts.cdnfonts.com/css/integral-cf'); /* Integral CF reliable web CDN link */
 @import "tailwindcss";
 
-@layer utilities {
-  .font-integral {
-    font-family: 'Integral CF', 'Impact', sans-serif;
-    font-weight: 700; /* Figma ki exact requirement */
-  }
-  .font-satoshi {
-    font-family: 'Satoshi', sans-serif;
-  }
+@font-face {
+  font-family: 'Integral CF';
+  src: url('/fonts/Integral CF BOLD.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-integral: 'Integral CF', sans-serif;
+  --font-satoshi: 'Satoshi', sans-serif;
+}
+
+/* Custom utility class to ensure it applies */
+.font-integral {
+  font-family: 'Integral CF', sans-serif;
+  font-weight: 700;
 }

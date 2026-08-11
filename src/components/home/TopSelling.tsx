@@ -70,7 +70,7 @@ const renderStars = (rating: number) => {
 
 export default function TopSelling() {
   return (
-    <section className="w-full max-w-[1440px] mx-auto px-4 sm:px-10 lg:px-[100px] pt-10 lg:pt-16 pb-8 lg:pb-10">
+    <section className="w-full max-w-[1440px] mx-auto px-4 sm:px-10 lg:px-[100px] pt-6 sm:pt-8 lg:pt-10 pb-8 lg:pb-10">
       
       {/* Heading */}
       <h2 className="text-center text-black font-extrabold uppercase tracking-tight text-[28px] sm:text-[40px] lg:text-[48px] mb-8 lg:mb-14" style={{ fontFamily: "'Integral CF', 'Arial Black', sans-serif" }}>

@@ -16,7 +16,7 @@ const config: Config = {
       },
       fontFamily: {
         satoshi: ["Satoshi", "sans-serif"],
-        integral: ["Integral CF", "sans-serif"],
+        integral: ["var(--font-integral)", "sans-serif"],
       },
     },
   },

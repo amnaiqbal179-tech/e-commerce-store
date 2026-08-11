@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export default function BrandsSection() {
   return (
-    <section className="w-full bg-black py-7 sm:py-8 lg:py-0 lg:h-[122px] flex items-center justify-center px-4 sm:px-10 lg:px-[100px] overflow-hidden">
+    <section className="w-full bg-black py-6 sm:py-7 lg:py-0 lg:h-[122px] flex items-center justify-center px-4 sm:px-10 lg:px-[100px] overflow-hidden relative z-30">
       <div className="max-w-[1440px] w-full mx-auto flex flex-wrap lg:flex-nowrap items-center justify-around lg:justify-between gap-6 sm:gap-8 lg:gap-0">
         
         {/* Versace Logo */}
