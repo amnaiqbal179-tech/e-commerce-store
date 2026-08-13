@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import AnnouncementBar from "@/components/layout/AnnouncementBar.top";
-import Navbar from "@/components/layout/Navbar";
 
 export const metadata: Metadata = {
   title: "SHOP.CO - E-Commerce Store",
   description: "Find clothes that matches your style",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -22,8 +16,6 @@ export default function RootLayout({
         />
       </head>
       <body className="font-satoshi antialiased bg-white text-black">
-        <AnnouncementBar />
-        <Navbar />
         {children}
       </body>
     </html>
