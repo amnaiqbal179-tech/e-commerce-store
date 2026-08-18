@@ -64,7 +64,7 @@ export default function ProductDetailPage() {
       image: product.image,
       size: selectedSize,
       color: selectedColor,
-      quantity: quantity,
+      quantity: quantity, // Yeh fix kar diya gaya hai (quantityState ki jagah quantity)
     });
     // Alert removed completely for smooth UI experience
   };

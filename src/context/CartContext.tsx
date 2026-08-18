@@ -13,7 +13,7 @@ export interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: { id: string | number; name: string; price: number; image: string; size?: string; color?: string }) => void;
+  addToCart: (product: { id: string | number; name: string; price: number; image: string; size?: string; color?: string; quantity?: number }) => void;
   decreaseQuantity: (id: string | number) => void;
   removeFromCart: (id: string | number) => void;
   clearCart: () => void;
@@ -28,7 +28,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const savedCart = localStorage.getItem("shop_cart");
     if (savedCart) {
       try {
-        setCart(JSON.parse(savedCart));
+        setCart(JSON.parse(savedCart) as CartItem[]);
       } catch (e) {
         console.error(e);
       }
@@ -39,17 +39,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("shop_cart", JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (product: { id: string | number; name: string; price: number; image: string; size?: string; color?: string }) => {
+  const addToCart = (product: { id: string | number; name: string; price: number; image: string; size?: string; color?: string; quantity?: number }) => {
+    const addedQuantity = product.quantity && product.quantity > 0 ? product.quantity : 1;
+    
     setCart((prevCart) => {
       const existingIndex = prevCart.findIndex(
         (item) => item.id === product.id && item.size === product.size && item.color === product.color
       );
       if (existingIndex > -1) {
         const updated = [...prevCart];
-        updated[existingIndex].quantity += 1;
+        updated[existingIndex].quantity += addedQuantity;
         return updated;
       }
-      return [...prevCart, { ...product, quantity: 1 }];
+      return [...prevCart, { ...product, quantity: addedQuantity }];
     });
   };
 
