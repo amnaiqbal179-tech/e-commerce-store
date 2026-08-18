@@ -77,7 +77,6 @@ export default function AdminHeader({ onMenuClick, user }: AdminHeaderProps) {
           {/* Real Clerk UserButton for Profile Management & Logout */}
           <div className="ml-0.5 sm:ml-1 flex items-center">
             <UserButton 
-              afterSignOutUrl="/"
               appearance={{
                 elements: {
                   avatarBox: "w-8 h-8 rounded-xl border border-gray-200/80 shadow-2xs"

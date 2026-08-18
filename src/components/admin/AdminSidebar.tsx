@@ -374,7 +374,6 @@ export default function AdminSidebar({ onClose, user }: AdminSidebarProps) {
         <div className="flex items-center gap-2.5 overflow-hidden">
           <div className="shrink-0">
             <UserButton 
-              afterSignOutUrl="/"
               appearance={{
                 elements: {
                   avatarBox: "w-8 h-8 rounded-xl border border-gray-200/80 shadow-2xs"
