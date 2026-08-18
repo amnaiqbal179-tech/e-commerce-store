@@ -27,17 +27,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Cart is empty." }, { status: 400 });
     }
 
+    // 🟢 Automatically create or update the user in Neon database if logged in
+    let validUserId = null;
+    if (userId && customerEmail) {
+      try {
+        const dbUser = await prisma.user.upsert({
+          where: { id: userId },
+          update: {
+            name: customerName,
+            email: customerEmail,
+          },
+          create: {
+            id: userId,
+            name: customerName || "User",
+            email: customerEmail,
+          },
+        });
+        validUserId = dbUser.id;
+      } catch (userErr) {
+        console.error("Failed to sync user to database:", userErr);
+      }
+    }
+
     // Case-insensitive check for Stripe payment method
     const isStripe = paymentMethod?.toLowerCase() === "stripe";
 
     const order = await prisma.order.create({
       data: {
-        userId: userId || null,
+        userId: validUserId, // 🟢 Linked with synced user ID
         customerName, customerEmail, customerPhone, address, city,
         postalCode, paymentMethod: paymentMethod || "COD", notes,
         totalAmount: Number(totalAmount),
-        status: "Pending", // Order fulfillment status (Admin baad mein change kar sakega)
-        paymentStatus: isStripe ? "Paid" : "Pending", // Stripe ke liye "Paid", COD ke liye "Pending"
+        status: "Pending", 
+        paymentStatus: isStripe ? "Paid" : "Pending", 
         items: {
           create: items.map((item: any) => ({
             productId: item.id ? String(item.id) : null,
