@@ -11,8 +11,14 @@ import {
   Menu, 
   X 
 } from "lucide-react";
+import { useCart } from "@/context/CartContext";
+import { useAuth, SignInButton, UserButton } from "@clerk/nextjs";
 
 export default function Navbar() {
+  const { cart } = useCart();
+  const { isSignedIn } = useAuth();
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
   // Desktop Dropdown States
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -41,7 +47,6 @@ export default function Navbar() {
         
         {/* Left Side: Mobile Menu Icon & Logo */}
         <div className="flex items-center gap-3 lg:gap-8">
-          {/* Mobile Hamburger Menu Icon Button */}
           <button 
             onClick={() => setIsMobileMenuOpen(true)}
             className="block lg:hidden text-black hover:opacity-75 transition-opacity p-1 cursor-pointer" 
@@ -50,7 +55,6 @@ export default function Navbar() {
             <Menu size={24} />
           </button>
 
-          {/* SHOP.CO Logo */}
           <Link 
             href="/" 
             className="font-extrabold text-[22px] sm:text-[28px] lg:text-[32px] tracking-tight leading-none text-black shrink-0"
@@ -62,7 +66,6 @@ export default function Navbar() {
         {/* Desktop Navigation Links */}
         <nav className="hidden lg:flex flex-row items-center gap-6 font-medium text-[16px] text-black shrink-0">
           
-          {/* Shop Dropdown Menu (Desktop) */}
           <div 
             className="relative"
             onMouseEnter={() => setIsShopOpen(true)}
@@ -76,11 +79,8 @@ export default function Navbar() {
               <ChevronDown size={16} className={`transition-transform duration-200 ${isShopOpen ? "rotate-180" : ""}`} />
             </div>
 
-            {/* Main Shop Dropdown */}
             {isShopOpen && (
               <div className="absolute top-full left-0 w-52 bg-white border border-black/10 rounded-2xl shadow-xl py-2 z-50">
-                
-                {/* Men Category */}
                 <div 
                   className="relative px-4 py-2.5 hover:bg-[#F0EEED] flex items-center justify-between cursor-pointer transition-colors"
                   onMouseEnter={() => setActiveCategory("men")}
@@ -88,7 +88,6 @@ export default function Navbar() {
                   <span className="font-medium text-black">Men</span>
                   <ChevronRight size={14} />
 
-                  {/* Men Subcategories */}
                   {activeCategory === "men" && (
                     <div className="absolute left-full top-0 w-52 bg-white border border-black/10 rounded-2xl shadow-xl py-2 z-50">
                       <Link href="/shop/men/t-shirts" className="block px-4 py-2.5 hover:bg-[#F0EEED] text-black font-medium transition-colors">
@@ -104,7 +103,6 @@ export default function Navbar() {
                   )}
                 </div>
 
-                {/* Women Category */}
                 <div 
                   className="relative px-4 py-2.5 hover:bg-[#F0EEED] flex items-center justify-between cursor-pointer transition-colors"
                   onMouseEnter={() => setActiveCategory("women")}
@@ -124,7 +122,6 @@ export default function Navbar() {
                   )}
                 </div>
 
-                {/* Kids Category */}
                 <div 
                   className="relative px-4 py-2.5 hover:bg-[#F0EEED] flex items-center justify-between cursor-pointer transition-colors"
                   onMouseEnter={() => setActiveCategory("kids")}
@@ -143,7 +140,6 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
-
               </div>
             )}
           </div>
@@ -163,10 +159,8 @@ export default function Navbar() {
           />
         </div>
 
-        {/* Right Action Icons (Search, Cart & User) */}
+        {/* Right Action Icons */}
         <div className="flex flex-row items-center gap-3 sm:gap-4 shrink-0">
-          
-          {/* Mobile Search Icon Button */}
           <button 
             onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
             className="block md:hidden text-black hover:opacity-75 transition-opacity p-1 cursor-pointer" 
@@ -175,33 +169,48 @@ export default function Navbar() {
             {isMobileSearchOpen ? <X size={22} /> : <Search size={22} strokeWidth={1.75} />}
           </button>
 
-          {/* Cart Icon */}
+          {/* Cart Icon with Live Count */}
           <Link 
             href="/cart" 
             aria-label="Cart" 
             className="text-black hover:opacity-75 w-8 h-8 flex items-center justify-center cursor-pointer transition-opacity relative"
           >
             <ShoppingCart size={22} strokeWidth={1.75} />
-            {/* Optional Badge */}
-            <span className="absolute -top-0.5 -right-0.5 bg-black text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-              2
-            </span>
+            {totalItems > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-black text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                {totalItems}
+              </span>
+            )}
           </Link>
           
-          {/* User Account Icon */}
-          <Link 
-            href="/account" 
-            aria-label="Account" 
-            className="text-black hover:opacity-75 w-8 h-8 flex items-center justify-center cursor-pointer transition-opacity"
-          >
-            <CircleUserRound size={22} strokeWidth={1.75} />
-          </Link>
-
+          {/* Clerk Auth Options with Custom Profile Order Link */}
+          {isSignedIn ? (
+            <div className="flex items-center justify-center">
+              <UserButton>
+                <UserButton.MenuItems>
+                  <UserButton.Link
+                    label="My Orders & Tracking"
+                    labelIcon={<ShoppingCart size={16} />}
+                    href="/profile"
+                  />
+                </UserButton.MenuItems>
+              </UserButton>
+            </div>
+          ) : (
+            <SignInButton mode="modal">
+              <button 
+                className="text-black hover:opacity-75 w-8 h-8 flex items-center justify-center cursor-pointer transition-opacity" 
+                aria-label="Sign In"
+              >
+                <CircleUserRound size={22} strokeWidth={1.75} />
+              </button>
+            </SignInButton>
+          )}
         </div>
 
       </div>
 
-      {/* Expandable Mobile Search Bar (Appears below header when mobile search icon is clicked) */}
+      {/* Expandable Mobile Search */}
       {isMobileSearchOpen && (
         <div className="block md:hidden px-4 pb-3.5 pt-1 bg-white border-t border-black/5 transition-all">
           <div className="flex items-center px-4 py-2.5 gap-2.5 bg-[#F0F0F0] rounded-full">
@@ -216,7 +225,7 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* Mobile Backdrop Shadow */}
+      {/* Mobile Backdrop & Drawer */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-50 lg:hidden transition-opacity duration-300"
@@ -224,13 +233,11 @@ export default function Navbar() {
         />
       )}
 
-      {/* Mobile Navigation Drawer (Slide in from left) */}
       <aside 
         className={`fixed top-0 left-0 bottom-0 w-[82%] max-w-[340px] bg-white z-50 lg:hidden overflow-y-auto transition-transform duration-300 ease-in-out flex flex-col justify-between shadow-2xl ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Mobile Menu Header */}
         <div className="p-5 border-b border-black/10 flex items-center justify-between">
           <Link href="/" onClick={closeMobileMenu} className="font-extrabold text-[22px] tracking-tight text-black">
             SHOP.CO
@@ -244,10 +251,7 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Mobile Navigation Body */}
         <div className="p-5 flex-1 space-y-4 font-medium text-base text-black">
-          
-          {/* Shop Accordion Item */}
           <div className="border-b border-gray-100 pb-3">
             <button 
               onClick={() => setIsMobileShopOpen(!isMobileShopOpen)}
@@ -257,11 +261,8 @@ export default function Navbar() {
               <ChevronDown size={18} className={`transition-transform duration-200 ${isMobileShopOpen ? "rotate-180" : ""}`} />
             </button>
 
-            {/* Shop Accordion Content */}
             {isMobileShopOpen && (
               <div className="pl-3 mt-2 space-y-2 border-l-2 border-black/10">
-                
-                {/* Men Sub-accordion */}
                 <div>
                   <button 
                     onClick={() => toggleMobileCategory("men")}
@@ -279,7 +280,6 @@ export default function Navbar() {
                   )}
                 </div>
 
-                {/* Women Sub-accordion */}
                 <div>
                   <button 
                     onClick={() => toggleMobileCategory("women")}
@@ -296,7 +296,6 @@ export default function Navbar() {
                   )}
                 </div>
 
-                {/* Kids Sub-accordion */}
                 <div>
                   <button 
                     onClick={() => toggleMobileCategory("kids")}
@@ -312,33 +311,42 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
-
               </div>
             )}
           </div>
 
-          <Link href="#on-sale" onClick={closeMobileMenu} className="block py-1.5 border-b border-gray-100 hover:text-gray-600 transition-colors">
-            On Sale
-          </Link>
-          <Link href="#new-arrivals" onClick={closeMobileMenu} className="block py-1.5 border-b border-gray-100 hover:text-gray-600 transition-colors">
-            New Arrivals
-          </Link>
-          <Link href="#brands" onClick={closeMobileMenu} className="block py-1.5 border-b border-gray-100 hover:text-gray-600 transition-colors">
-            Brands
-          </Link>
+          <Link href="#on-sale" onClick={closeMobileMenu} className="block py-1.5 border-b border-gray-100 hover:text-gray-600 transition-colors">On Sale</Link>
+          <Link href="#new-arrivals" onClick={closeMobileMenu} className="block py-1.5 border-b border-gray-100 hover:text-gray-600 transition-colors">New Arrivals</Link>
+          <Link href="#brands" onClick={closeMobileMenu} className="block py-1.5 border-b border-gray-100 hover:text-gray-600 transition-colors">Brands</Link>
         </div>
 
-        {/* Mobile Drawer Footer */}
-        <div className="p-5 border-t border-gray-100 bg-gray-50 space-y-2">
-          <Link 
-            href="/account" 
-            onClick={closeMobileMenu} 
-            className="w-full bg-black text-white font-medium py-2.5 rounded-full text-center text-sm block shadow-sm hover:bg-gray-800 transition-colors"
-          >
-            My Account
-          </Link>
+        {/* Mobile Auth Button */}
+        <div className="p-5 border-t border-gray-100 bg-gray-50 space-y-3">
+          {isSignedIn ? (
+            <div className="flex flex-col gap-3">
+              <Link 
+                href="/profile" 
+                onClick={closeMobileMenu}
+                className="w-full bg-black text-white font-medium py-2.5 rounded-full text-center text-sm block shadow-sm hover:bg-gray-800 transition-colors cursor-pointer"
+              >
+                My Orders & Tracking
+              </Link>
+              <div className="flex items-center justify-between py-1 px-1">
+                <span className="text-sm font-medium text-black">Manage Account</span>
+                <UserButton />
+              </div>
+            </div>
+          ) : (
+            <SignInButton mode="modal">
+              <button 
+                onClick={closeMobileMenu} 
+                className="w-full bg-black text-white font-medium py-2.5 rounded-full text-center text-sm block shadow-sm hover:bg-gray-800 transition-colors cursor-pointer"
+              >
+                Sign In / Register
+              </button>
+            </SignInButton>
+          )}
         </div>
-
       </aside>
 
     </header>

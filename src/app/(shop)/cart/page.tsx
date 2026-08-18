@@ -1,79 +1,178 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { IoIosArrowForward } from "react-icons/io";
 import { BsTrash } from "react-icons/bs";
 import { FiTag } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa";
+import { Tag } from "lucide-react";
 import Footer from "@/components/layout/Footer";
+import { useCart } from "@/context/CartContext";
+import { useUser } from "@clerk/nextjs"; // 1. Clerk hook import kiya
+
+interface Coupon {
+  id: string;
+  code: string;
+  discountPercent: number;
+  isActive?: boolean;
+  expiryDate?: string;
+}
 
 export default function CartPage() {
-  // Cart items state with your public folder product images
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Gradient Graphic T-shirt",
-      size: "Large",
-      color: "White",
-      price: 145,
-      image: "/product-5.png",
-      quantity: 1,
-    },
-    {
-      id: 2,
-      name: "Checkered Shirt",
-      size: "Medium",
-      color: "Red",
-      price: 180,
-      image: "/product-9.png",
-      quantity: 1,
-    },
-    {
-      id: 3,
-      name: "Skinny Fit Jeans",
-      size: "Large",
-      color: "Blue",
-      price: 240,
-      image: "/product-8.png",
-      quantity: 1,
-    },
-  ]);
+  const router = useRouter();
+  const { cart, addToCart, decreaseQuantity, removeFromCart } = useCart();
+  const { isSignedIn } = useUser(); // 2. User ki login state check karne ke liye
 
-  // Quantity increase handler
-  const handleIncrement = (id: number) => {
-    setCartItems(
-      cartItems.map((item) =>
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-      )
-    );
+  // Item ki unique key generate karne ke liye helper
+  const getItemKey = (item: any) => `${item.id}-${item.size || ""}-${item.color || ""}`;
+
+  // Selected items store karne ke liye state
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+
+  // Promo code states
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPercent: number } | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
+
+  // Page load hone par ya cart update hone par default sab items select karein aur admin-generated coupons fetch karein
+  useEffect(() => {
+    setSelectedKeys(cart.map((item) => getItemKey(item)));
+
+    // Database / Admin dashboard se available coupons fetch karne ke liye API call
+    async function fetchCoupons() {
+      try {
+        const res = await fetch("/api/coupons");
+        if (res.ok) {
+          const data = await res.json();
+          let couponsList: Coupon[] = [];
+          
+          if (Array.isArray(data)) {
+            couponsList = data;
+          } else if (data.coupons && Array.isArray(data.coupons)) {
+            couponsList = data.coupons;
+          }
+
+          // Sirf active aur valid coupons filter karein jo admin dashboard se generate huwe hain
+          const activeCoupons = couponsList.filter((c: any) => 
+            c.isActive !== false && 
+            (!c.expiryDate || new Date(c.expiryDate) > new Date())
+          );
+
+          setAvailableCoupons(activeCoupons.length > 0 ? activeCoupons : couponsList);
+        }
+      } catch (error) {
+        console.error("Failed to fetch coupons", error);
+      }
+    }
+    fetchCoupons();
+  }, [cart]);
+
+  // Individual checkbox toggle logic
+  const toggleSelect = (key: string) => {
+    if (selectedKeys.includes(key)) {
+      setSelectedKeys(selectedKeys.filter((k) => k !== key));
+    } else {
+      setSelectedKeys([...selectedKeys, key]);
+    }
   };
 
-  // Quantity decrease handler
-  const handleDecrement = (id: number) => {
-    setCartItems(
-      cartItems.map((item) =>
-        item.id === id && item.quantity > 1
-          ? { ...item, quantity: item.quantity - 1 }
-          : item
-      )
-    );
+  // Select All toggle logic
+  const toggleSelectAll = () => {
+    if (selectedKeys.length === cart.length) {
+      setSelectedKeys([]);
+    } else {
+      setSelectedKeys(cart.map((item) => getItemKey(item)));
+    }
   };
 
-  // Item remove (delete) handler
-  const handleRemove = (id: number) => {
-    setCartItems(cartItems.filter((item) => item.id !== id));
-  };
+  // Sirf selected items ke mutabiq items filter karein
+  const selectedCartItems = cart.filter((item) =>
+    selectedKeys.includes(getItemKey(item))
+  );
 
-  // Calculations
-  const subtotal = cartItems.reduce(
+  // Sirf selected items ke mutabiq calculation
+  const subtotal = selectedCartItems.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
   );
-  const discount = Math.round(subtotal * 0.2); // 20% discount matching design
-  const deliveryFee = subtotal > 0 ? 15 : 0;
+
+  // Dynamic Discount calculation (Agar coupon applied hai toh uska percent, warna default 20% ya 0)
+  const discountPercent = appliedCoupon ? appliedCoupon.discountPercent : 20;
+  const discount = Math.round((subtotal * discountPercent) / 100);
+  
+  const deliveryFee = selectedCartItems.length > 0 ? 15 : 0;
   const total = subtotal - discount + deliveryFee;
+
+  // Handle Apply Promo Code API call (Supports both manual input and tag click)
+  const handleApplyCoupon = async (codeToApply?: string) => {
+    const codeVal = codeToApply || promoCodeInput;
+    if (!codeVal.trim()) {
+      setCouponError("Please enter a promo code");
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    setCouponError("");
+
+    try {
+      const res = await fetch("/api/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          code: codeVal.trim(),
+          cartTotal: subtotal // Backend par minimum order limit check karne ke liye zaroori hai
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setAppliedCoupon({
+          code: codeVal.trim().toUpperCase(),
+          discountPercent: data.discountPercent,
+        });
+        setCouponError("");
+        setPromoCodeInput("");
+      } else {
+        setCouponError(data.message || "Invalid or expired promo code");
+      }
+    } catch (error) {
+      setCouponError("Something went wrong. Try again.");
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  // Checkout redirect function (Clerk Auth Check Added)
+  const handleProceedToCheckout = () => {
+    if (selectedCartItems.length === 0) {
+      alert("Please select at least one item to proceed to checkout!");
+      return;
+    }
+
+    // Selected items aur applied coupon ko localStorage mein save karein taake Checkout page read kar sake
+    localStorage.setItem("checkout_items", JSON.stringify(selectedCartItems));
+    if (appliedCoupon) {
+      localStorage.setItem("applied_coupon", JSON.stringify(appliedCoupon));
+    } else {
+      localStorage.removeItem("applied_coupon");
+    }
+
+    // 3. Check karein ke user logged-in hai ya nahi
+    if (!isSignedIn) {
+      // Agar logged-in nahi hai, toh Clerk ke sign-in page par bhej dein aur wapas checkout par laane ke liye redirect_url set karein
+      router.push("/sign-in?redirect_url=/checkout");
+      return;
+    }
+
+    // Agar logged-in hai, toh seedha checkout page par redirect karein
+    router.push("/checkout");
+  };
 
   return (
     <main className="w-full bg-white">
@@ -92,7 +191,7 @@ export default function CartPage() {
           Your cart
         </h1>
 
-        {cartItems.length === 0 ? (
+        {cart.length === 0 ? (
           <div className="text-center py-20 border border-black/10 rounded-[20px]">
             <p className="text-black/60 text-lg mb-4">Your cart is empty.</p>
             <Link
@@ -104,79 +203,113 @@ export default function CartPage() {
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-5 items-start">
+
             {/* Left: Cart Items List */}
             <div className="w-full lg:flex-1 border border-black/10 rounded-[20px] p-4 sm:p-6 flex flex-col gap-6">
-              {cartItems.map((item, index) => (
-                <React.Fragment key={item.id}>
-                  <div className="flex gap-4 items-start justify-between">
-                    {/* Product Image */}
-                    <div className="w-[100px] h-[100px] sm:w-[124px] sm:h-[124px] bg-[#F0EEED] rounded-[16px] relative shrink-0 overflow-hidden flex items-center justify-center">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
+
+              {/* Select All Checkbox Header */}
+              <div className="flex items-center gap-3 border-b border-black/10 pb-4">
+                <input
+                  type="checkbox"
+                  checked={selectedKeys.length === cart.length && cart.length > 0}
+                  onChange={toggleSelectAll}
+                  className="w-5 h-5 accent-black cursor-pointer rounded-md"
+                />
+                <span className="text-black font-semibold text-sm sm:text-base">
+                  Select All ({selectedCartItems.length}/{cart.length} selected)
+                </span>
+              </div>
+
+              {cart.map((item, index) => {
+                const itemKey = getItemKey(item);
+                const isSelected = selectedKeys.includes(itemKey);
+
+                return (
+                  <React.Fragment key={itemKey}>
+                    <div className="flex gap-3 sm:gap-4 items-center justify-between">
+
+                      {/* Item Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(itemKey)}
+                        className="w-5 h-5 accent-black cursor-pointer rounded-md shrink-0"
                       />
-                    </div>
 
-                    {/* Product Details */}
-                    <div className="flex-1 flex flex-col justify-between h-full min-h-[100px] sm:min-h-[124px]">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-bold text-black text-base sm:text-lg">
-                            {item.name}
-                          </h3>
-                          <p className="text-xs sm:text-sm text-black/60 mt-1">
-                            Size: <span className="text-black">{item.size}</span>
-                          </p>
-                          <p className="text-xs sm:text-sm text-black/60">
-                            Color: <span className="text-black">{item.color}</span>
-                          </p>
-                        </div>
-                        {/* Delete Button */}
-                        <button
-                          onClick={() => handleRemove(item.id)}
-                          className="text-[#FF3333] cursor-pointer hover:opacity-80 p-1"
-                          title="Remove item"
-                        >
-                          <BsTrash size={20} />
-                        </button>
+                      {/* Product Image */}
+                      <div className="w-[90px] h-[90px] sm:w-[124px] sm:h-[124px] bg-[#F0EEED] rounded-[16px] relative shrink-0 overflow-hidden flex items-center justify-center">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                        />
                       </div>
 
-                      {/* Price & Quantity Controls */}
-                      <div className="flex justify-between items-center mt-3">
-                        <span className="font-bold text-black text-xl sm:text-2xl">
-                          ${item.price * item.quantity}
-                        </span>
+                      {/* Product Details */}
+                      <div className="flex-1 flex flex-col justify-between h-full min-h-[90px] sm:min-h-[124px]">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-bold text-black text-base sm:text-lg">
+                              {item.name}
+                            </h3>
+                            {item.size && (
+                              <p className="text-xs sm:text-sm text-black/60 mt-1">
+                                Size: <span className="text-black">{item.size}</span>
+                              </p>
+                            )}
+                            {item.color && (
+                              <p className="text-xs sm:text-sm text-black/60">
+                                Color: <span className="text-black">{item.color}</span>
+                              </p>
+                            )}
+                          </div>
 
-                        {/* Quantity Button (+ / -) */}
-                        <div className="flex items-center bg-[#F0F0F0] rounded-full px-3 py-1.5 sm:py-2 gap-4">
+                          {/* Delete Button */}
                           <button
-                            onClick={() => handleDecrement(item.id)}
-                            className="text-black font-bold cursor-pointer hover:opacity-60"
+                            onClick={() => removeFromCart(item.id)}
+                            className="text-[#FF3333] cursor-pointer hover:opacity-80 p-1"
+                            title="Remove item"
                           >
-                            -
+                            <BsTrash size={20} />
                           </button>
-                          <span className="text-black font-medium text-sm sm:text-base">
-                            {item.quantity}
+                        </div>
+
+                        {/* Price & Quantity Controls */}
+                        <div className="flex justify-between items-center mt-3">
+                          <span className="font-bold text-black text-xl sm:text-2xl">
+                            ${item.price * item.quantity}
                           </span>
-                          <button
-                            onClick={() => handleIncrement(item.id)}
-                            className="text-black font-bold cursor-pointer hover:opacity-60"
-                          >
-                            +
-                          </button>
+
+                          {/* Quantity Button (+ / -) */}
+                          <div className="flex items-center bg-[#F0F0F0] rounded-full px-3 py-1.5 sm:py-2 gap-4">
+                            <button
+                              onClick={() => decreaseQuantity(item.id)}
+                              className="text-black font-bold cursor-pointer hover:opacity-60"
+                            >
+                              -
+                            </button>
+                            <span className="text-black font-medium text-sm sm:text-base">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => addToCart(item)}
+                              className="text-black font-bold cursor-pointer hover:opacity-60"
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Divider between items */}
-                  {index < cartItems.length - 1 && (
-                    <hr className="border-black/10" />
-                  )}
-                </React.Fragment>
-              ))}
+                    {/* Divider between items */}
+                    {index < cart.length - 1 && (
+                      <hr className="border-black/10" />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
 
             {/* Right: Order Summary */}
@@ -189,7 +322,7 @@ export default function CartPage() {
                   <span className="font-bold text-black">${subtotal}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Discount (-20%)</span>
+                  <span>Discount ({appliedCoupon ? `${appliedCoupon.code} - ` : ''}{discountPercent}%)</span>
                   <span className="font-bold text-[#FF3333]">-${discount}</span>
                 </div>
                 <div className="flex justify-between">
@@ -205,31 +338,77 @@ export default function CartPage() {
                 <span className="text-xl sm:text-2xl">${total}</span>
               </div>
 
-              {/* Promo Code Input */}
-              <div className="flex gap-3">
-                <div className="flex-1 flex items-center bg-[#F0F0F0] rounded-full px-4 py-3 gap-3">
-                  <FiTag className="text-black/40" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Add promo code"
-                    className="bg-transparent text-sm outline-none w-full text-black placeholder:text-black/40"
-                  />
+              {/* Available Coupons Tags Section (Admin Generated Coupons Only) */}
+              {availableCoupons.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold text-black/60 uppercase tracking-wider">
+                    Available Promo Codes:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableCoupons.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => handleApplyCoupon(c.code)}
+                        type="button"
+                        className="flex items-center space-x-1 bg-gray-50 hover:bg-black hover:text-white border border-dashed border-black/20 text-black text-xs px-3 py-1.5 rounded-lg transition font-medium cursor-pointer"
+                      >
+                        <Tag size={12} className="mr-1 inline" />
+                        <span>{c.code} ({c.discountPercent}% OFF)</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <button className="bg-black text-white px-6 py-3 rounded-full font-medium text-sm hover:bg-black/80 transition-all cursor-pointer">
-                  Apply
-                </button>
+              )}
+
+              {/* Promo Code Input & Application */}
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-3">
+                  <div className="flex-1 flex items-center bg-[#F0F0F0] rounded-full px-4 py-3 gap-3">
+                    <FiTag className="text-black/40" size={20} />
+                    <input
+                      type="text"
+                      placeholder="Add promo code"
+                      value={promoCodeInput}
+                      onChange={(e) => setPromoCodeInput(e.target.value)}
+                      className="bg-transparent text-sm outline-none w-full text-black placeholder:text-black/40 uppercase"
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleApplyCoupon()}
+                    disabled={isApplyingCoupon}
+                    className="bg-black text-white px-6 py-3 rounded-full font-medium text-sm hover:bg-black/80 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isApplyingCoupon ? "Applying..." : "Apply"}
+                  </button>
+                </div>
+
+                {appliedCoupon && (
+                  <p className="text-green-600 text-xs sm:text-sm font-medium">
+                    Coupon &quot;{appliedCoupon.code}&quot; applied successfully! ({appliedCoupon.discountPercent}% off)
+                  </p>
+                )}
+
+                {couponError && (
+                  <p className="text-[#FF3333] text-xs sm:text-sm font-medium">
+                    {couponError}
+                  </p>
+                )}
               </div>
 
               {/* Checkout Button */}
-              <button className="w-full bg-black text-white py-4 rounded-full font-medium flex items-center justify-center gap-2 hover:bg-black/80 transition-all cursor-pointer">
-                Go to Checkout <FaArrowRight size={16} />
+              <button
+                onClick={handleProceedToCheckout}
+                disabled={selectedCartItems.length === 0}
+                className="w-full bg-black text-white py-4 rounded-full font-medium flex items-center justify-center gap-2 hover:bg-black/80 transition-all cursor-pointer disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Go to Checkout ({selectedCartItems.length}) <FaArrowRight size={16} />
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Footer Component Imported */}
+      {/* Footer Component */}
       <Footer />
     </main>
   );

@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ================= MODELS =================
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  role      String   @default("CUSTOMER")
+  createdAt DateTime @default(now())
+  orders    Order[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  title       String
+  sku         String?  @unique // SKU field
+  description String?
+  price       Float
+  stock       Int      @default(10)
+  rating      Float    @default(4.8) // Rating field
+  category    String?
+  subcategory String?
+  status      String   @default("active")
+  image       String?
+  variants    Json?    // Variants JSON store karne ke liye
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Opposing relations added to fix validation errors
+  productVariants ProductVariant[]
+  reviews         Review[]
+  orderItems      OrderItem[]
+}
+
+model ProductVariant {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  option    String   // e.g., "Size", "Color"
+  value     String   // e.g., "XL", "Red"
+  price     Float?   // Agar variant ki price main price se alag ho (optional)
+  stock     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  name      String
+  title     String?
+  comment   String
+  rating    Int
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique @default(cuid())
+  userId          String?     
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  customerName    String
+  customerEmail   String?
+  customerPhone   String
+  address         String
+  city            String
+  postalCode      String?     
+  notes           String?     
+  
+  status          String      @default("Pending") // Fulfillment / Order Status (Processing, Shipped, Delivered, etc.)
+  paymentStatus   String      @default("Pending") // Payment Status (Paid, Pending, Failed)
+  totalAmount     Float
+  discountAmount  Float?      @default(0) // 🟢 Added: Coupon discount amount track karne ke liye
+  couponCode      String?     // 🟢 Added: Kaun sa promo code use hua yeh track karne ke liye
+  paymentMethod   String      @default("COD")     
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  title     String?  
+  image     String?  @db.Text
+  size      String?  
+  color     String?  
+  quantity  Int
+  price     Float
+}
+
+// ================= COUPON / PROMO CODE MODEL =================
+model Coupon {
+  id              String   @id @default(cuid())
+  code            String   @unique // e.g., "SAVE20"
+  discountPercent Float?   // e.g., 20 for 20% off
+  fixedDiscount   Float?   // e.g., $10 flat off
+  minOrderAmount  Float    @default(0) // Minimum shopping limit required
+  usageLimit      Int?     // Total kitni dafa use ho sakta hai
+  usedCount       Int      @default(0) // Ab tak kitni dafa use ho chuka hai
+  isActive        Boolean  @default(true)
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  title     String   // e.g., "Withdrawal to JP Morgan Chase (0440)"
+  amount    String   // e.g., "-1,275.79 USD"
+  status    String   @default("Completed")
+  date      String   // e.g., "16 Aug 2025"
+  createdAt DateTime @default(now())
+}
+
+model Balance {
+  id       String @id @default(cuid())
+  currency String // e.g., "USD", "EUR", "GBP"
+  amount   Float  @default(0.0)
+}
+
+// ================= DASHBOARD ANALYTICS MODELS =================
+
+model ProductItem {
+  id        String   @id @default(cuid())
+  name      String
+  image     String?  @db.Text
+  price     Float
+  sold      Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model MonthlyRevenue {
+  id      String @id @default(cuid())
+  month   String // Jan, Feb, Mar, etc.
+  desktop Float
+  mobile  Float
+}
+
+model ReturningRate {
+  id    String @id @default(cuid())
+  month String // Mar, Apr, May, etc.
+  desktop Float
+  mobile  Float
+}
+
+model LocationStat {
+  id       String  @id @default(cuid())
+  country  String
+  change   String
+  positive Boolean
+  percent  Int
+}

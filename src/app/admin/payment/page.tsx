@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { ArrowRightLeft, Info, X, ChevronRight, RefreshCw } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ArrowRightLeft, Info, X, ChevronRight, RefreshCw, Loader2 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer, CartesianGrid, XAxis, YAxis } from "recharts";
 
 // Exact wave curve data matching shadcn UI kit
@@ -13,38 +13,93 @@ const exchangeData = [
   { date: "Jun 30", value: 75 },
 ];
 
-const transactionsData = {
-  latest: [
-    { id: 1, date: "16 Aug 2025", title: "Withdrawal to JP Morgan Chase (0440)", status: "Completed", amount: "-1,275.79 USD", type: "withdrawal" },
-    { id: 2, date: "5 Aug 2025", title: "Withdrawal to Citibank (2290)", status: "Completed", amount: "-202.99 USD", type: "withdrawal" },
-    { id: 3, date: "5 Aug 2025", title: "Withdrawal to Bank of America (3311)", status: "Completed", amount: "-1,272.30 USD", type: "withdrawal" },
-    { id: 4, date: "4 Aug 2025", title: "Payment from Paddle", status: "Completed", amount: "+5,651.56 USD", type: "deposit" },
-    { id: 5, date: "4 Aug 2025", title: "Withdrawal to HSBC (5522)", status: "Completed", amount: "-1,679.35 USD", type: "withdrawal" },
-    { id: 6, date: "20 Aug 2025", title: "Withdrawal to JP Morgan Chase (1133)", status: "Completed", amount: "-3,420.00 USD", type: "withdrawal" },
-    { id: 7, date: "18 Aug 2025", title: "Payment from Stripe", status: "Completed", amount: "+2,345.75 USD", type: "deposit" },
-  ],
-  upcoming: [
-    { id: 8, date: "22 Aug 2025", title: "Scheduled Payout - Stripe", status: "Pending", amount: "+2,345.75 USD", type: "deposit" },
-    { id: 9, date: "25 Aug 2025", title: "Scheduled Payout - PayPal", status: "Pending", amount: "+850.00 USD", type: "deposit" },
-  ]
-};
+// Fallback default data agar database abhi khali ho
+const defaultBalances = [
+  { currency: "USD", amount: 1240.30 },
+  { currency: "EUR", amount: 500.00 },
+  { currency: "GBP", amount: 0.00 },
+];
+
+const defaultTransactions = [
+  { id: "1", date: "16 Aug 2025", title: "Withdrawal to JP Morgan Chase (0440)", status: "Completed", amount: "-1,275.79 USD" },
+  { id: "2", date: "5 Aug 2025", title: "Withdrawal to Citibank (2290)", status: "Completed", amount: "-202.99 USD" },
+  { id: "3", date: "5 Aug 2025", title: "Withdrawal to Bank of America (3311)", status: "Completed", amount: "-1,272.30 USD" },
+  { id: "4", date: "4 Aug 2025", title: "Payment from Paddle", status: "Completed", amount: "+5,651.56 USD" },
+  { id: "5", date: "22 Aug 2025", title: "Scheduled Payout - Stripe", status: "Pending", amount: "+2,345.75 USD" },
+  { id: "6", date: "25 Aug 2025", title: "Scheduled Payout - PayPal", status: "Pending", amount: "+850.00 USD" },
+];
 
 export default function PaymentDashboardPage() {
   const [activeTab, setActiveTab] = useState<"latest" | "upcoming">("latest");
   const [showAlert, setShowAlert] = useState(true);
+  
+  // Backend data states
+  const [loading, setLoading] = useState(true);
+  const [balances, setBalances] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+
+  // Backend API se data fetch karna
+  useEffect(() => {
+    async function fetchPaymentData() {
+      try {
+        const res = await fetch("/api/admin/payment");
+        const json = await res.json();
+        if (res.ok) {
+          setBalances(json.balances || []);
+          setTransactions(json.transactions || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch payment data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchPaymentData();
+  }, []);
+
+  // Use database data if available, otherwise use defaults
+  const finalBalances = balances.length > 0 ? balances : defaultBalances;
+  const finalTransactions = transactions.length > 0 ? transactions : defaultTransactions;
+
+  // Find individual currency amounts
+  const getBalanceAmount = (curr: string) => {
+    const item = finalBalances.find((b) => b.currency.toUpperCase() === curr);
+    return item ? item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+  };
+
+  // Calculate total funds across all balances
+  const totalFundsNum = finalBalances.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const formattedTotal = totalFundsNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Separate latest (Completed) and upcoming (Pending) transactions
+  const latestList = finalTransactions.filter((tx) => tx.status !== "Pending");
+  const upcomingList = finalTransactions.filter((tx) => tx.status === "Pending");
+  const currentList = activeTab === "latest" ? latestList : upcomingList;
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center bg-[#fbfbfb]">
+        <div className="flex items-center gap-2 text-gray-500 text-xs font-medium">
+          <Loader2 className="w-5 h-5 animate-spin text-black" />
+          Loading payment dashboard...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-4 bg-[#fbfbfb] min-h-screen font-sans text-gray-900">
       
-      {/* Page Header (Tight Top Gap) */}
+      {/* Page Header */}
       <div className="mb-3">
         <h1 className="text-xl font-bold text-gray-900 tracking-tight">Balances</h1>
         <p className="text-gray-500 text-[11px] mt-0.5">
-          Total funds in all balances: <span className="font-semibold text-gray-800">1.740,30 USD</span>
+          Total funds in all balances: <span className="font-semibold text-gray-800">{formattedTotal} USD</span>
         </p>
       </div>
 
-      {/* Main Grid Layout - Stretched Height */}
+      {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         
         {/* LEFT COLUMN */}
@@ -82,7 +137,7 @@ export default function PaymentDashboardPage() {
                 <div className="flex items-baseline gap-2">
                   <span className="text-xs font-semibold text-gray-400">US</span>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 tracking-tight">1,240.30</h3>
+                    <h3 className="text-xl font-bold text-gray-900 tracking-tight">{getBalanceAmount("USD")}</h3>
                     <span className="text-[11px] font-semibold text-gray-500">USD</span>
                   </div>
                 </div>
@@ -95,7 +150,7 @@ export default function PaymentDashboardPage() {
                 <div className="flex items-baseline gap-2">
                   <span className="text-xs font-semibold text-gray-400">EU</span>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 tracking-tight">500.00</h3>
+                    <h3 className="text-xl font-bold text-gray-900 tracking-tight">{getBalanceAmount("EUR")}</h3>
                     <span className="text-[11px] font-semibold text-gray-500">EUR</span>
                   </div>
                 </div>
@@ -108,7 +163,7 @@ export default function PaymentDashboardPage() {
                 <div className="flex items-baseline gap-2">
                   <span className="text-xs font-semibold text-gray-400">GB</span>
                   <h3 className="text-xl font-bold text-gray-900 tracking-tight">
-                    0.00 <span className="text-[11px] font-semibold text-gray-500">GBP</span>
+                    {getBalanceAmount("GBP")} <span className="text-[11px] font-semibold text-gray-500">GBP</span>
                   </h3>
                 </div>
                 <div className="w-6 h-6 bg-gray-50/80 rounded-full flex items-center justify-center text-gray-400 border border-gray-100 shrink-0">
@@ -149,35 +204,42 @@ export default function PaymentDashboardPage() {
               </div>
 
               <div className="space-y-2">
-                {transactionsData[activeTab].map((tx) => (
-                  <div 
-                    key={tx.id} 
-                    className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white hover:bg-gray-50/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-6">
-                      <span className="text-[11px] font-medium text-gray-400 w-20 shrink-0">{tx.date}</span>
-                      <div>
-                        <p className="font-semibold text-xs text-gray-900">{tx.title}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{tx.status}</p>
+                {currentList.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-4">No transactions found.</p>
+                ) : (
+                  currentList.map((tx: any, idx: number) => {
+                    const isDeposit = tx.amount?.toString().startsWith("+");
+                    return (
+                      <div 
+                        key={tx.id || idx} 
+                        className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white hover:bg-gray-50/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-6">
+                          <span className="text-[11px] font-medium text-gray-400 w-20 shrink-0">{tx.date}</span>
+                          <div>
+                            <p className="font-semibold text-xs text-gray-900">{tx.title}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{tx.status}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className={`font-semibold text-xs ${isDeposit ? "text-emerald-600" : "text-rose-500"}`}>
+                            {tx.amount}
+                          </span>
+                          <div className="p-1 border border-gray-200/80 rounded-lg text-gray-400">
+                            <ChevronRight className="w-3 h-3" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={`font-semibold text-xs ${tx.type === "deposit" ? "text-emerald-600" : "text-rose-500"}`}>
-                        {tx.amount}
-                      </span>
-                      <div className="p-1 border border-gray-200/80 rounded-lg text-gray-400">
-                        <ChevronRight className="w-3 h-3" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
 
         </div>
 
-        {/* RIGHT COLUMN - Matched Length & Design */}
+        {/* RIGHT COLUMN - Exchange Rates & Chart */}
         <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-2xs flex flex-col justify-between h-full">
           
           <div>
@@ -211,7 +273,7 @@ export default function PaymentDashboardPage() {
               <button className="px-2.5 py-1 rounded-lg hover:text-black transition-all cursor-pointer">1Y</button>
             </div>
 
-            {/* Graph with Gridlines & Exact Curve */}
+            {/* Graph */}
             <div className="h-56 w-full my-2">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={exchangeData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
@@ -221,7 +283,6 @@ export default function PaymentDashboardPage() {
                       <stop offset="95%" stopColor="#000000" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  {/* Faint Horizontal Lines like reference design */}
                   <CartesianGrid strokeDasharray="0" vertical={false} stroke="#f3f4f6" />
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af' }} />
                   <YAxis hide domain={[0, 100]} />
@@ -238,7 +299,7 @@ export default function PaymentDashboardPage() {
             </div>
           </div>
 
-          {/* Action Buttons (Matches original length & structure) */}
+          {/* Action Buttons */}
           <div className="space-y-2 pt-4">
             <button className="w-full bg-black text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-gray-800 transition-colors cursor-pointer shadow-2xs">
               Convert Currencies

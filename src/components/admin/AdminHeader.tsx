@@ -1,12 +1,14 @@
 "use client";
 
 import { Search, Bell, Moon, Palette, PanelLeft } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 
 interface AdminHeaderProps {
   onMenuClick?: () => void;
+  user?: any; // Clerk user prop
 }
 
-export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
+export default function AdminHeader({ onMenuClick, user }: AdminHeaderProps) {
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-3 sm:px-6 py-2.5 sm:py-3 transition-all">
       <div className="flex items-center justify-between gap-2 sm:gap-4">
@@ -72,17 +74,17 @@ export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             <Palette className="w-4 h-4" />
           </button>
 
-          {/* User Profile Avatar */}
-          <button 
-            className="w-8 h-8 rounded-xl overflow-hidden border border-gray-200/80 ml-0.5 sm:ml-1 shadow-2xs hover:ring-2 hover:ring-gray-300 transition-all cursor-pointer shrink-0"
-            aria-label="User Menu"
-          >
-            <img 
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces" 
-              alt="Profile" 
-              className="w-full h-full object-cover"
+          {/* Real Clerk UserButton for Profile Management & Logout */}
+          <div className="ml-0.5 sm:ml-1 flex items-center">
+            <UserButton 
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox: "w-8 h-8 rounded-xl border border-gray-200/80 shadow-2xs"
+                }
+              }}
             />
-          </button>
+          </div>
           
         </div>
 

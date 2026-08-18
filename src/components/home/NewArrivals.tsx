@@ -1,45 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-const products = [
-  {
-    id: 1,
-    name: "T-shirt with Tape Details",
-    rating: 4.5,
-    price: 120,
-    oldPrice: null,
-    discount: null,
-    image: "/products/tshirt1.png",
-  },
-  {
-    id: 2,
-    name: "Skinny Fit Jeans",
-    rating: 3.5,
-    price: 240,
-    oldPrice: 260,
-    discount: "-20%",
-    image: "/products/jeans.png",
-  },
-  {
-    id: 3,
-    name: "Checkered Shirt",
-    rating: 4.5,
-    price: 180,
-    oldPrice: null,
-    discount: null,
-    image: "/products/shirt.png",
-  },
-  {
-    id: 4,
-    name: "Sleeve Striped T-shirt",
-    rating: 4.5,
-    price: 130,
-    oldPrice: 160,
-    discount: "-30%",
-    image: "/products/tshirt2.png",
-  },
-];
-
+// Helper function to render stars based on rating
 const renderStars = (rating: number) => {
   return (
     <div className="flex gap-[3px] sm:gap-[5px] items-center">
@@ -68,7 +30,7 @@ const renderStars = (rating: number) => {
   );
 };
 
-export default function NewArrivals() {
+export default function NewArrivals({ products }: { products: any[] }) {
   return (
     <section className="w-full max-w-[1440px] mx-auto px-4 sm:px-10 lg:px-[100px] pt-6 sm:pt-8 lg:pt-10 pb-8 lg:pb-10">
       
@@ -77,54 +39,62 @@ export default function NewArrivals() {
         NEW ARRIVALS
       </h2>
 
-      {/* Products Grid - 2 columns on mobile, 4 on desktop */}
+      {/* Products Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-[20px]">
-        {products.map((product) => (
-          <div key={product.id} className="flex flex-col gap-3 sm:gap-4">
-            
-            <div className="relative w-full aspect-square bg-[#F0EEED] rounded-[13px] sm:rounded-[20px] overflow-hidden flex items-center justify-center">
-              <Image 
-                src={product.image} 
-                alt={product.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 50vw, 25vw"
-              />
-            </div>
+        {products && products.length > 0 ? (
+          products.map((product) => {
+            const avgRating = product.reviews && product.reviews.length > 0
+              ? product.reviews.reduce((acc: number, rev: any) => acc + rev.rating, 0) / product.reviews.length
+              : 4.5;
 
-            <div className="flex flex-col gap-1 sm:gap-2">
-              <h3 className="text-black font-bold text-[14px] sm:text-[18px] lg:text-[20px] leading-tight capitalize truncate sm:whitespace-normal">
-                {product.name}
-              </h3>
-              
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                {renderStars(product.rating)}
-                <span className="text-black/60 text-[12px] sm:text-[14px]">
-                  <span className="text-black">{product.rating}</span>/5
-                </span>
-              </div>
+            return (
+              <Link href={`/products/${product.id}`} key={product.id} className="flex flex-col gap-3 sm:gap-4 group">
+                <div className="relative w-full aspect-square bg-[#F0EEED] rounded-[13px] sm:rounded-[20px] overflow-hidden flex items-center justify-center">
+                  <Image 
+                    src={product.image || "/products/tshirt1.png"} 
+                    alt={product.name || "Product Image"} // <--- Yehin fix kiya hai
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                  />
+                </div>
 
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <span className="text-black font-bold text-[16px] sm:text-[22px] lg:text-[24px]">
-                  ${product.price}
-                </span>
-                
-                {product.oldPrice && (
-                  <span className="text-black/40 font-bold text-[16px] sm:text-[22px] lg:text-[24px] line-through">
-                    ${product.oldPrice}
-                  </span>
-                )}
-                
-                {product.discount && (
-                  <span className="bg-[#FF3333]/10 text-[#FF3333] font-medium text-[10px] sm:text-[12px] px-2 sm:px-3 py-0.5 sm:py-1.5 rounded-[62px]">
-                    {product.discount}
-                  </span>
-                )}
-              </div>
-            </div>
+                <div className="flex flex-col gap-1 sm:gap-2">
+                  <h3 className="text-black font-bold text-[14px] sm:text-[18px] lg:text-[20px] leading-tight capitalize truncate sm:whitespace-normal">
+                    {product.name || "Untitled Product"}
+                  </h3>
+                  
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    {renderStars(avgRating)}
+                    <span className="text-black/60 text-[12px] sm:text-[14px]">
+                      <span className="text-black">{avgRating.toFixed(1)}</span>/5
+                    </span>
+                  </div>
 
-          </div>
-        ))}
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="text-black font-bold text-[16px] sm:text-[22px] lg:text-[24px]">
+                      ${product.price}
+                    </span>
+                    
+                    {product.oldPrice && (
+                      <span className="text-black/40 font-bold text-[16px] sm:text-[22px] lg:text-[24px] line-through">
+                        ${product.oldPrice}
+                      </span>
+                    )}
+                    
+                    {product.discount && (
+                      <span className="bg-[#FF3333]/10 text-[#FF3333] font-medium text-[10px] sm:text-[12px] px-2 sm:px-3 py-0.5 sm:py-1.5 rounded-[62px]">
+                        {product.discount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            );
+          })
+        ) : (
+          <p className="col-span-full text-center text-gray-500 py-6">No new arrivals found. Add products from the admin dashboard!</p>
+        )}
       </div>
 
       {/* View All Button */}

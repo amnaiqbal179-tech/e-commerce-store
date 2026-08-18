@@ -1,45 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-const topSellingProducts = [
-  {
-    id: 1,
-    name: "Vertical Striped Shirt",
-    rating: 5.0,
-    price: 212,
-    oldPrice: 232,
-    discount: "-20%",
-    image: "/products/vertical-shirt.png",
-  },
-  {
-    id: 2,
-    name: "Courage Graphic T-shirt",
-    rating: 4.0,
-    price: 145,
-    oldPrice: null,
-    discount: null,
-    image: "/products/courage-tshirt.png",
-  },
-  {
-    id: 3,
-    name: "Loose Fit Bermuda Shorts",
-    rating: 3.0,
-    price: 80,
-    oldPrice: null,
-    discount: null,
-    image: "/products/bermuda-shorts.png",
-  },
-  {
-    id: 4,
-    name: "Faded Skinny Jeans",
-    rating: 4.5,
-    price: 210,
-    oldPrice: null,
-    discount: null,
-    image: "/products/faded-jeans.png",
-  },
-];
-
+// Helper function to render stars based on rating
 const renderStars = (rating: number) => {
   return (
     <div className="flex gap-[3px] sm:gap-[5px] items-center">
@@ -68,7 +30,7 @@ const renderStars = (rating: number) => {
   );
 };
 
-export default function TopSelling() {
+export default function TopSelling({ products }: { products: any[] }) {
   return (
     <section className="w-full max-w-[1440px] mx-auto px-4 sm:px-10 lg:px-[100px] pt-6 sm:pt-8 lg:pt-10 pb-8 lg:pb-10">
       
@@ -77,54 +39,62 @@ export default function TopSelling() {
         TOP SELLING
       </h2>
 
-      {/* Products Grid - 2 columns on mobile, 4 on desktop */}
+      {/* Products Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-[20px]">
-        {topSellingProducts.map((product) => (
-          <div key={product.id} className="flex flex-col gap-3 sm:gap-4">
-            
-            <div className="relative w-full aspect-square bg-[#F0EEED] rounded-[13px] sm:rounded-[20px] overflow-hidden flex items-center justify-center">
-              <Image 
-                src={product.image} 
-                alt={product.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 50vw, 25vw"
-              />
-            </div>
+        {products && products.length > 0 ? (
+          products.map((product) => {
+            const avgRating = product.reviews && product.reviews.length > 0
+              ? product.reviews.reduce((acc: number, rev: any) => acc + rev.rating, 0) / product.reviews.length
+              : 4.8;
 
-            <div className="flex flex-col gap-1 sm:gap-2">
-              <h3 className="text-black font-bold text-[14px] sm:text-[18px] lg:text-[20px] leading-tight capitalize truncate sm:whitespace-normal">
-                {product.name}
-              </h3>
-              
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                {renderStars(product.rating)}
-                <span className="text-black/60 text-[12px] sm:text-[14px]">
-                  <span className="text-black">{product.rating.toFixed(1)}</span>/5
-                </span>
-              </div>
+            return (
+              <Link href={`/products/${product.id}`} key={product.id} className="flex flex-col gap-3 sm:gap-4 group">
+                <div className="relative w-full aspect-square bg-[#F0EEED] rounded-[13px] sm:rounded-[20px] overflow-hidden flex items-center justify-center">
+                  <Image 
+                    src={product.image || "/products/vertical-shirt.png"} 
+                    alt={product.name || "Top Selling Product"} // <--- Fallback add kar diya hai
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                  />
+                </div>
 
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <span className="text-black font-bold text-[16px] sm:text-[22px] lg:text-[24px]">
-                  ${product.price}
-                </span>
-                
-                {product.oldPrice && (
-                  <span className="text-black/40 font-bold text-[16px] sm:text-[22px] lg:text-[24px] line-through">
-                    ${product.oldPrice}
-                  </span>
-                )}
-                
-                {product.discount && (
-                  <span className="bg-[#FF3333]/10 text-[#FF3333] font-medium text-[10px] sm:text-[12px] px-2 sm:px-3 py-0.5 sm:py-1.5 rounded-[62px]">
-                    {product.discount}
-                  </span>
-                )}
-              </div>
-            </div>
+                <div className="flex flex-col gap-1 sm:gap-2">
+                  <h3 className="text-black font-bold text-[14px] sm:text-[18px] lg:text-[20px] leading-tight capitalize truncate sm:whitespace-normal">
+                    {product.name || "Untitled Product"}
+                  </h3>
+                  
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    {renderStars(avgRating)}
+                    <span className="text-black/60 text-[12px] sm:text-[14px]">
+                      <span className="text-black">{avgRating.toFixed(1)}</span>/5
+                    </span>
+                  </div>
 
-          </div>
-        ))}
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="text-black font-bold text-[16px] sm:text-[22px] lg:text-[24px]">
+                      ${product.price}
+                    </span>
+                    
+                    {product.oldPrice && (
+                      <span className="text-black/40 font-bold text-[16px] sm:text-[22px] lg:text-[24px] line-through">
+                        ${product.oldPrice}
+                      </span>
+                    )}
+                    
+                    {product.discount && (
+                      <span className="bg-[#FF3333]/10 text-[#FF3333] font-medium text-[10px] sm:text-[12px] px-2 sm:px-3 py-0.5 sm:py-1.5 rounded-[62px]">
+                        {product.discount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            );
+          })
+        ) : (
+          <p className="col-span-full text-center text-gray-500 py-6">No top selling products found.</p>
+        )}
       </div>
 
       {/* View All Button */}

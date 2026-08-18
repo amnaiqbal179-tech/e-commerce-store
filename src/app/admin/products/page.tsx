@@ -1,363 +1,268 @@
-"use client";
+import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { Plus, Search, ArrowUpDown, ChevronDown, Columns3, Filter, Tag, Star } from "lucide-react";
+import ProductActions from "./ProductActions";
 
-import { useState } from "react";
-import { 
-  Plus, 
-  Search, 
-  PlusCircle, 
-  ChevronDown, 
-  MoreHorizontal, 
-  Star, 
-  ArrowUpDown,
-  Columns
-} from "lucide-react";
+export const revalidate = 0;
 
-interface Product {
-  id: string;
-  name: string;
-  image: string;
-  price: number;
-  category: string;
-  stock: number;
-  sku: string;
-  rating: number;
-  status: "Active" | "Out Of Stock" | "Closed For Sale";
+interface ProductsListPageProps {
+  searchParams?: Promise<{ query?: string }>;
 }
 
-// Fixed & verified working image URLs matching Shadcn UI Kit reference
-const initialProducts: Product[] = [
-  {
-    id: "1",
-    name: "HP Pavilion 16.1 Inch Gaming Laptop",
-    image: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=200&auto=format&fit=crop&q=80", 
-    price: 960.99,
-    category: "Electronics",
-    stock: 5,
-    sku: "RCH45Q1A",
-    rating: 4.9,
-    status: "Active",
-  },
-  {
-    id: "2",
-    name: "Samsung SM-A21S Galaxy A21S",
-    image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=200&auto=format&fit=crop&q=80", 
-    price: 350.00,
-    category: "Electronics",
-    stock: 25,
-    sku: "MVCFH27F",
-    rating: 4.65,
-    status: "Active",
-  },
-  {
-    id: "3",
-    name: "Schwaiger KH510S 513 Buegelkopfhoerer",
-    // Fixed direct working URL for Black Pants / Apparel
-    image: "https://images.unsplash.com/photo-1584865288642-42078afe6942?w=200&auto=format&fit=crop&q=80", 
-    price: 300.00,
-    category: "Electronics",
-    stock: 27,
-    sku: "MVCFH27F",
-    rating: 4.65,
-    status: "Out Of Stock",
-  },
-  {
-    id: "4",
-    name: "Ultimate Ears Wonderboom Bluetooth Speaker",
-    image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=200&auto=format&fit=crop&q=80", 
-    price: 119.99,
-    category: "Electronics",
-    stock: 10,
-    sku: "MVCFH27F",
-    rating: 4.65,
-    status: "Active",
-  },
-  {
-    id: "5",
-    name: "Canon Pixma TS3350 Multifunction Printer",
-    image: "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=200&auto=format&fit=crop&q=80", 
-    price: 439.50,
-    category: "Electronics",
-    stock: 25,
-    sku: "MVCFH27F",
-    rating: 4.65,
-    status: "Closed For Sale",
-  },
-  {
-    id: "6",
-    name: "Canon 4000D 18-55 MM III (Canon Eurasia Guaranteed)",
-    image: "https://images.unsplash.com/photo-1600080972464-8e5f35f63d08?w=200&auto=format&fit=crop&q=80", 
-    price: 49.50,
-    category: "Beauty",
-    stock: 25,
-    sku: "MVCFH27F",
-    rating: 4.65,
-    status: "Closed For Sale",
-  },
-  {
-    id: "7",
-    name: "Lobwerk Lenovo Tab M10 TB-X605F",
-    image: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=200&auto=format&fit=crop&q=80", 
-    price: 49.50,
-    category: "Beauty",
-    stock: 25,
-    sku: "MVCFH27F",
-    rating: 4.65,
-    status: "Closed For Sale",
-  },
-];
+export default async function ProductsListPage({ searchParams }: ProductsListPageProps) {
+  const resolvedParams = await searchParams;
+  const query = resolvedParams?.query || "";
 
-export default function ProductsPage() {
-  const [products] = useState<Product[]>(initialProducts);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  let products: any[] = [];
+  let dbError = false;
 
-  const toggleSelectProduct = (id: string) => {
-    setSelectedProducts(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
+  // 1. Try-Catch to prevent page hangs on DB failure
+  try {
+    products = await prisma.product.findMany({
+      where: query
+        ? {
+            OR: [
+              { title: { contains: query, mode: "insensitive" } },
+              { category: { contains: query, mode: "insensitive" } },
+            ],
+          }
+        : undefined,
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Database Error:", error);
+    dbError = true;
+  }
 
-  const toggleSelectAll = () => {
-    if (selectedProducts.length === filteredProducts.length) {
-      setSelectedProducts([]);
-    } else {
-      setSelectedProducts(filteredProducts.map(p => p.id));
-    }
-  };
-
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Calculate real metrics from database products
+  const totalProducts = products.length;
+  const inStockCount = products.filter((p: any) => (p.quantity ?? p.stock ?? 0) > 0).length;
+  const outOfStockCount = totalProducts - inStockCount;
+  const totalInventoryValue = products.reduce((acc: number, p: any) => acc + (Number(p.price) || 0) * (p.quantity ?? p.stock ?? 0), 0);
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50/30 min-h-screen font-sans">
-      
-      {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Products</h1>
-        <button className="bg-black hover:bg-gray-800 text-white font-medium px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-colors cursor-pointer shadow-xs">
+    <div className="p-6 space-y-6 bg-gray-50/40 min-h-screen text-gray-800">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Products</h1>
+          <p className="text-xs text-gray-500 mt-1">Manage your store products and inventory.</p>
+        </div>
+        <Link
+          href="/admin/products/add"
+          className="bg-black hover:bg-gray-800 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-2xs transition-colors cursor-pointer w-fit"
+        >
           <Plus className="w-4 h-4" />
           <span>Add Product</span>
-        </button>
+        </Link>
       </div>
 
-      {/* KPI Cards Section */}
+      {/* Stats Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-500 font-medium">
-            <span>Total Sales</span>
-            <span className="bg-emerald-50 text-emerald-600 font-semibold px-2 py-0.5 rounded-full border border-emerald-100/60">
-              +20.1%
-            </span>
+          <div className="flex items-center justify-between text-gray-500 text-xs font-medium">
+            <span>Total Products</span>
+            <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px] font-semibold">Live</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">$30,230</p>
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-2xl font-bold text-gray-900">{totalProducts}</h3>
+            <span className="text-xs text-gray-400">Items in DB</span>
+          </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-500 font-medium">
-            <span>Number of Sales</span>
-            <span className="bg-emerald-50 text-emerald-600 font-semibold px-2 py-0.5 rounded-full border border-emerald-100/60">
-              +5.02
-            </span>
+          <div className="flex items-center justify-between text-gray-500 text-xs font-medium">
+            <span>Inventory Value</span>
+            <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-[10px] font-semibold">Total</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">982</p>
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-2xl font-bold text-gray-900">${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            <span className="text-xs text-emerald-600 font-medium">Active</span>
+          </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-500 font-medium">
-            <span>Affiliate</span>
-            <span className="bg-emerald-50 text-emerald-600 font-semibold px-2 py-0.5 rounded-full border border-emerald-100/60">
-              +3.1%
-            </span>
+          <div className="flex items-center justify-between text-gray-500 text-xs font-medium">
+            <span>In Stock Items</span>
+            <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px] font-semibold">Ready</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">$4,530</p>
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-2xl font-bold text-gray-900">{inStockCount}</h3>
+            <span className="text-xs text-gray-400">Products</span>
+          </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-500 font-medium">
-            <span>Discounts</span>
-            <span className="bg-rose-50 text-rose-600 font-semibold px-2 py-0.5 rounded-full border border-rose-100/60">
-              -3.58%
-            </span>
+          <div className="flex items-center justify-between text-gray-500 text-xs font-medium">
+            <span>Out of Stock</span>
+            <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-md text-[10px] font-semibold">Alert</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">$2,230</p>
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-2xl font-bold text-gray-900">{outOfStockCount}</h3>
+            <span className="text-xs text-red-500 font-medium">{outOfStockCount > 0 ? "Restock" : "All Good"}</span>
+          </div>
         </div>
       </div>
 
-      {/* Filter and Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
-          <div className="relative w-full max-w-xs">
+      {/* Database Error Warning */}
+      {dbError && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs">
+          ⚠️ Database se connect karne mein masla aa raha hai. Apni Prisma `.env` connection string aur DB status check karein.
+        </div>
+      )}
+
+      {/* Products Table Card */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden">
+        {/* Filters & Search Toolbar */}
+        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <form method="GET" className="relative flex-1 max-w-sm">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
+            <input
               type="text"
+              name="query"
+              defaultValue={query}
               placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200/80 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-black transition-colors"
             />
+          </form>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button type="button" className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-xs font-medium text-gray-600 flex items-center gap-1.5 transition-colors cursor-pointer">
+              <Filter className="w-3.5 h-3.5 text-gray-400" />
+              <span>Status</span>
+            </button>
+            <button type="button" className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-xs font-medium text-gray-600 flex items-center gap-1.5 transition-colors cursor-pointer">
+              <Tag className="w-3.5 h-3.5 text-gray-400" />
+              <span>Category</span>
+            </button>
+            <button type="button" className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-xs font-medium text-gray-600 flex items-center gap-1.5 transition-colors cursor-pointer">
+              <span>Price Range</span>
+              <ChevronDown className="w-3 h-3 text-gray-400" />
+            </button>
+            <button type="button" className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-xs font-medium text-gray-600 flex items-center gap-1.5 transition-colors cursor-pointer">
+              <Columns3 className="w-3.5 h-3.5 text-gray-400" />
+              <span>Columns</span>
+            </button>
           </div>
-
-          <button className="bg-white border border-dashed border-gray-300 hover:border-gray-400 text-gray-700 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer">
-            <PlusCircle className="w-3.5 h-3.5 text-gray-500" />
-            <span>Status</span>
-          </button>
-
-          <button className="bg-white border border-dashed border-gray-300 hover:border-gray-400 text-gray-700 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer">
-            <PlusCircle className="w-3.5 h-3.5 text-gray-500" />
-            <span>Category</span>
-          </button>
-
-          <button className="bg-white border border-gray-200/80 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer">
-            <span>Price: $100-$200</span>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-          </button>
         </div>
 
-        <button className="bg-white border border-gray-200/80 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer shadow-2xs">
-          <span>Columns</span>
-          <Columns className="w-3.5 h-3.5 text-gray-500" />
-        </button>
-      </div>
-
-      {/* Products Data Table */}
-      <div className="bg-white border border-gray-200/80 rounded-2xl overflow-hidden shadow-2xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-gray-100 text-gray-500 font-medium bg-gray-50/50 select-none">
-                <th className="py-3.5 px-4 w-10 text-center">
-                  <input 
-                    type="checkbox"
-                    checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
-                    onChange={toggleSelectAll}
-                    className="rounded-sm border-gray-300 text-black focus:ring-0 cursor-pointer"
-                  />
+        {/* Table */}
+        <div className="overflow-x-auto min-h-[350px]">
+          <table className="w-full text-left text-xs text-gray-600">
+            <thead className="bg-gray-50 text-gray-700 uppercase text-[10px] tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="py-3.5 px-4 w-10">
+                  <input type="checkbox" className="rounded border-gray-300 text-black focus:ring-black cursor-pointer" />
                 </th>
                 <th className="py-3.5 px-4">
-                  <button className="flex items-center gap-1 hover:text-gray-900 transition-colors font-semibold text-gray-700">
-                    Product Name <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                  </button>
+                  <div className="flex items-center gap-1.5 cursor-pointer hover:text-black">
+                    <span>Product Name</span>
+                    <ArrowUpDown className="w-3 h-3" />
+                  </div>
                 </th>
                 <th className="py-3.5 px-4">
-                  <button className="flex items-center gap-1 hover:text-gray-900 transition-colors font-semibold text-gray-700">
-                    Price <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                  </button>
+                  <div className="flex items-center gap-1.5 cursor-pointer hover:text-black">
+                    <span>Price</span>
+                    <ArrowUpDown className="w-3 h-3" />
+                  </div>
                 </th>
                 <th className="py-3.5 px-4">
-                  <button className="flex items-center gap-1 hover:text-gray-900 transition-colors font-semibold text-gray-700">
-                    Category <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                  </button>
+                  <div className="flex items-center gap-1.5 cursor-pointer hover:text-black">
+                    <span>Category</span>
+                    <ArrowUpDown className="w-3 h-3" />
+                  </div>
                 </th>
                 <th className="py-3.5 px-4">
-                  <button className="flex items-center gap-1 hover:text-gray-900 transition-colors font-semibold text-gray-700">
-                    Stock <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                  </button>
+                  <div className="flex items-center gap-1.5 cursor-pointer hover:text-black">
+                    <span>Stock</span>
+                    <ArrowUpDown className="w-3 h-3" />
+                  </div>
                 </th>
-                <th className="py-3.5 px-4 font-semibold text-gray-700">SKU</th>
-                <th className="py-3.5 px-4 font-semibold text-gray-700">Rating</th>
+                <th className="py-3.5 px-4">SKU</th>
                 <th className="py-3.5 px-4">
-                  <button className="flex items-center gap-1 hover:text-gray-900 transition-colors font-semibold text-gray-700">
-                    Status <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                  </button>
+                  <div className="flex items-center gap-1.5 cursor-pointer hover:text-black">
+                    <span>Rating</span>
+                    <ArrowUpDown className="w-3 h-3" />
+                  </div>
                 </th>
-                <th className="py-3.5 px-4 w-10 text-center"></th>
+                <th className="py-3.5 px-4">
+                  <div className="flex items-center gap-1.5 cursor-pointer hover:text-black">
+                    <span>Status</span>
+                    <ArrowUpDown className="w-3 h-3" />
+                  </div>
+                </th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-gray-700">
-              {filteredProducts.map((product) => {
-                const isSelected = selectedProducts.includes(product.id);
-                return (
-                  <tr 
-                    key={product.id} 
-                    className={`hover:bg-gray-50/60 transition-colors ${isSelected ? "bg-gray-50/80" : ""}`}
-                  >
-                    <td className="py-3.5 px-4 text-center">
-                      <input 
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelectProduct(product.id)}
-                        className="rounded-sm border-gray-300 text-black focus:ring-0 cursor-pointer"
-                      />
-                    </td>
+            <tbody className="divide-y divide-gray-100">
+              {products.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-gray-400">
+                    No products found. Click &quot;Add Product&quot; to create one!
+                  </td>
+                </tr>
+              ) : (
+                products.map((product: any) => {
+                  const priceFormatted = Number(product.price || 0).toFixed(2);
+                  const stockCount = product.quantity ?? product.stock ?? 0;
+                  const skuValue = product.sku || `RCH${product.id ? product.id.slice(0, 5).toUpperCase() : "45Q1A"}`;
+                  const ratingValue = product.rating || "4.9";
+                  const isActive = stockCount > 0;
 
-                    {/* Product Name & Studio Box Image */}
-                    <td className="py-3.5 px-4 font-medium text-gray-900">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-[#EAEBED] border border-gray-200/60 flex items-center justify-center overflow-hidden shrink-0">
-                          <img 
-                            src={product.image} 
-                            alt={product.name} 
-                            onError={(e) => {
-                              // Fallback if network drops any image
-                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=200&auto=format&fit=crop&q=80";
-                            }}
-                            className="w-full h-full object-cover mix-blend-multiply"
-                          />
+                  return (
+                    <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="py-3 px-4">
+                        <input type="checkbox" className="rounded border-gray-300 text-black focus:ring-black cursor-pointer" />
+                      </td>
+                      <td className="py-3 px-4 font-medium text-gray-900">
+                        <Link href={`/admin/products/${product.id}`} className="flex items-center gap-3 group">
+                          <div className="w-10 h-10 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0 relative flex items-center justify-center">
+                            <img
+                              src={product.image && product.image.trim() !== "" ? product.image : "/default-image.jpg"}
+                              alt={product.title || "Product image"}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                          </div>
+                          <div>
+                            <p className="font-bold text-xs group-hover:text-blue-600 transition-colors">{product.title || "Untitled"}</p>
+                            <p className="text-[10px] text-gray-400 line-clamp-1">{product.description || "No description"}</p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-gray-900">${priceFormatted}</td>
+                      <td className="py-3 px-4">
+                        <span className="capitalize font-medium text-gray-700">{product.category || "General"}</span>
+                        {product.subcategory && (
+                          <span className="block text-[10px] text-gray-400 capitalize">{product.subcategory}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 font-medium">{stockCount}</td>
+                      <td className="py-3 px-4 font-mono text-[11px] text-gray-500">{skuValue}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1 font-semibold text-gray-700">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          <span>{ratingValue}</span>
                         </div>
-                        <span className="line-clamp-1 max-w-[260px] text-xs text-gray-900 font-medium">
-                          {product.name}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold inline-flex items-center gap-1 ${
+                          isActive ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-amber-500"}`}></span>
+                          {isActive ? "Active" : "Out Of Stock"}
                         </span>
-                      </div>
-                    </td>
-
-                    <td className="py-3.5 px-4 font-semibold text-gray-900">
-                      ${product.price.toFixed(2)}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-gray-600">
-                      {product.category}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-gray-800 font-medium">
-                      {product.stock}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-gray-500 font-mono text-[11px]">
-                      {product.sku}
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1 font-semibold text-gray-800">
-                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                        <span>{product.rating}</span>
-                      </div>
-                    </td>
-
-                    {/* Status Badges */}
-                    <td className="py-3.5 px-4">
-                      {product.status === "Active" && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
-                          Active
-                        </span>
-                      )}
-                      {product.status === "Out Of Stock" && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-600 border border-amber-200">
-                          Out Of Stock
-                        </span>
-                      )}
-                      {product.status === "Closed For Sale" && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-600 text-white uppercase tracking-wider">
-                          Closed For Sale
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-center">
-                      <button className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <ProductActions productId={product.id} />
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
-
     </div>
   );
 }

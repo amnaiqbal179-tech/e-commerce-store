@@ -1,161 +1,71 @@
-"use client";
+import { prisma } from "@/lib/prisma";
+import { Download, Calendar, ChevronRight } from "lucide-react";
 
-import { useState } from "react";
-import { Calendar, Download, ChevronRight } from "lucide-react";
-
-// Exact Transactions Data from Screenshot
-const transactionsData = [
-  {
-    id: 1,
-    date: "16 Aug 2025",
-    title: "Withdrawal to JP Morgan Chase (0440)",
-    status: "Completed",
-    amount: "-1,275.79 USD",
-    type: "withdrawal",
-  },
-  {
-    id: 2,
-    date: "5 Aug 2025",
-    title: "Withdrawal to Citibank (2290)",
-    status: "Completed",
-    amount: "-202.99 USD",
-    type: "withdrawal",
-  },
-  {
-    id: 3,
-    date: "5 Aug 2025",
-    title: "Withdrawal to Bank of America (3311)",
-    status: "Completed",
-    amount: "-1,272.30 USD",
-    type: "withdrawal",
-  },
-  {
-    id: 4,
-    date: "4 Aug 2025",
-    title: "Payment from Paddle",
-    status: "Completed",
-    amount: "+5,651.56 USD",
-    type: "payment",
-  },
-  {
-    id: 5,
-    date: "4 Aug 2025",
-    title: "Withdrawal to HSBC (5522)",
-    status: "Completed",
-    amount: "-1,679.35 USD",
-    type: "withdrawal",
-  },
-  {
-    id: 6,
-    date: "20 Aug 2025",
-    title: "Withdrawal to JP Morgan Chase (1133)",
-    status: "Completed",
-    amount: "-3,420.00 USD",
-    type: "withdrawal",
-  },
-  {
-    id: 7,
-    date: "18 Aug 2025",
-    title: "Payment from Stripe",
-    status: "Completed",
-    amount: "+2,345.75 USD",
-    type: "payment",
-  },
-];
-
-export default function TransactionsPage() {
-  const [activeTab, setActiveTab] = useState("Latest");
+export default async function TransactionsPage() {
+  const transactions = await prisma.transaction.findMany({
+    orderBy: { id: "desc" },
+  });
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50/30 min-h-screen font-sans text-gray-800">
-      
-      {/* ================= HEADER SECTION ================= */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Transactions</h1>
-
-        {/* Top Right Controls */}
-        <div className="flex items-center gap-2">
-          {/* Date Picker Button */}
-          <button className="bg-white border border-gray-200/80 hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-2 shadow-2xs transition-colors cursor-pointer">
-            <Calendar className="w-3.5 h-3.5 text-gray-500" />
-            <span>17 Jul 2026 - 13 Aug 2026</span>
+    <div className="p-8 max-w-5xl mx-auto">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
+        <div className="flex gap-2">
+          <button className="flex items-center gap-2 border px-3 py-2 rounded-md text-sm hover:bg-gray-50">
+            <Calendar className="w-4 h-4" />
+            21 Jul 2026 - 17 Aug 2026
           </button>
-
-          {/* Download Button */}
-          <button className="bg-black hover:bg-gray-800 text-white p-2.5 rounded-xl shadow-2xs transition-colors cursor-pointer">
+          <button className="p-2 border rounded-md hover:bg-gray-50">
             <Download className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* ================= TABS NAVIGATION ================= */}
-      <div className="flex items-center gap-1">
-        <div className="bg-gray-100/70 p-1 rounded-xl flex items-center gap-1">
-          <button
-            onClick={() => setActiveTab("Latest")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "Latest"
-                ? "bg-white text-gray-900 shadow-2xs"
-                : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            Latest
-          </button>
-          <button
-            onClick={() => setActiveTab("Upcoming")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "Upcoming"
-                ? "bg-white text-gray-900 shadow-2xs"
-                : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            Upcoming
-          </button>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-6 border-b mb-6 text-sm font-medium">
+        <button className="pb-2 border-b-2 border-black text-black">Latest</button>
+        <button className="pb-2 text-gray-500 hover:text-black">Upcoming</button>
       </div>
 
-      {/* ================= TRANSACTIONS LIST CARD ================= */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden divide-y divide-gray-100">
-        {transactionsData.map((item) => (
+      {/* Transaction List */}
+      <div className="border rounded-lg bg-white">
+        {transactions.map((tx, index) => (
           <div
-            key={item.id}
-            className="p-4 sm:p-5 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
+            key={tx.id}
+            className={`flex items-center justify-between p-4 ${
+              index !== transactions.length - 1 ? "border-b" : ""
+            } hover:bg-gray-50 transition-colors`}
           >
-            {/* Left: Date */}
-            <div className="w-28 sm:w-36 text-xs font-semibold text-gray-800 shrink-0">
-              {item.date}
-            </div>
-
-            {/* Middle: Title & Status */}
-            <div className="flex-1 px-2 sm:px-4">
-              <p className="text-xs font-medium text-gray-900 leading-snug">
-                {item.title}
-              </p>
-              <p className="text-[11px] text-gray-400 mt-0.5 font-normal">
-                {item.status}
-              </p>
-            </div>
-
-            {/* Right: Amount & Chevron */}
-            <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-              <span
-                className={`text-xs font-semibold ${
-                  item.type === "payment"
-                    ? "text-emerald-600"
-                    : "text-rose-500"
-                }`}
-              >
-                {item.amount}
+            <div className="flex items-center gap-6">
+              {/* Date */}
+              <span className="text-sm text-gray-500 w-24">
+                {new Date(tx.createdAt).toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
               </span>
+              
+              {/* Title & Status */}
+              <div>
+                <h4 className="text-sm font-medium">{tx.title}</h4>
+                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] uppercase font-semibold bg-green-50 text-green-700 border border-green-200">
+                  {tx.status || "Completed"}
+                </span>
+              </div>
+            </div>
 
-              <button className="p-1.5 border border-gray-200/80 rounded-xl hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer">
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+            {/* Amount & Arrow */}
+            <div className="flex items-center gap-4">
+              <span className={`text-sm font-semibold ${tx.amount.startsWith('-') ? 'text-red-600' : 'text-green-600'}`}>
+                {tx.amount} USD
+              </span>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
             </div>
           </div>
         ))}
       </div>
-
     </div>
   );
 }

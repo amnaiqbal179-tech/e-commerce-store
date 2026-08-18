@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -17,19 +18,22 @@ import {
   Bell, 
   AlertCircle, 
   LayoutGrid, 
-  MoreVertical,
   X
 } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 
 interface AdminSidebarProps {
   onClose?: () => void;
+  user?: any; // Clerk user prop
 }
 
-export default function AdminSidebar({ onClose }: AdminSidebarProps) {
+export default function AdminSidebar({ onClose, user }: AdminSidebarProps) {
+  const pathname = usePathname();
+
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({
     dashboards: true,
     ecommerce: true,
-    payment: true, // Set to true so Payment dashboard links are visible directly
+    payment: true,
     apps: false,
     aiApps: false,
     pages: false,
@@ -43,6 +47,32 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
   const handleNavClick = () => {
     if (onClose) onClose();
   };
+
+  // Helper function to check if a link is active
+  const isActive = (path: string) => pathname === path;
+
+  // Dynamic styling for links
+  const getLinkClass = (path: string, customPadding = "px-2.5 py-1.5") => {
+    const active = isActive(path);
+    return `block ${customPadding} rounded-lg transition-colors ${
+      active
+        ? "bg-gray-100/90 font-semibold text-gray-900 shadow-2xs"
+        : "hover:bg-gray-100/70 text-gray-600 hover:text-gray-900"
+    }`;
+  };
+
+  const getAiLinkClass = (path: string) => {
+    const active = isActive(path);
+    return `block px-3 py-1.5 rounded-lg transition-colors ${
+      active
+        ? "bg-purple-100/70 font-semibold text-purple-900"
+        : "hover:bg-purple-50/60 text-gray-600 hover:text-purple-900"
+    }`;
+  };
+
+  // User details fallback for text display next to UserButton
+  const userName = user?.fullName || user?.firstName || "Admin User";
+  const userEmail = user?.primaryEmailAddress?.emailAddress || "admin@shop.co";
 
   return (
     <aside className="w-64 sm:w-72 lg:w-64 bg-white border-r border-gray-200/80 flex flex-col h-full lg:h-screen font-sans select-none shadow-xl lg:shadow-none">
@@ -93,11 +123,7 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
           {openMenus.dashboards && (
             <div className="pl-6 space-y-0.5 mt-1 border-l border-gray-200/60 ml-4">
-              <Link 
-                href="/admin/classic" 
-                onClick={handleNavClick}
-                className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors"
-              >
+              <Link href="/admin/classic" onClick={handleNavClick} className={getLinkClass("/admin/classic", "px-3 py-1.5")}>
                 Classic Dashboard
               </Link>
 
@@ -119,22 +145,22 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
                 {openMenus.ecommerce && (
                   <div className="pl-4 space-y-0.5 mt-0.5 border-l border-gray-200/60 ml-3">
-                    <Link href="/admin" onClick={handleNavClick} className="block px-2.5 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+                    <Link href="/admin" onClick={handleNavClick} className={getLinkClass("/admin")}>
                       Dashboard
                     </Link>
-                    <Link href="/admin/products" onClick={handleNavClick} className="block px-2.5 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+                    <Link href="/admin/products" onClick={handleNavClick} className={getLinkClass("/admin/products")}>
                       Product List
                     </Link>
-                    <Link href="/admin/products/detail" onClick={handleNavClick} className="block px-2.5 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+                    <Link href="/admin/products/detail" onClick={handleNavClick} className={getLinkClass("/admin/products/detail")}>
                       Product Detail
                     </Link>
-                    <Link href="/admin/products/add" onClick={handleNavClick} className="block px-2.5 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+                    <Link href="/admin/products/add" onClick={handleNavClick} className={getLinkClass("/admin/products/add")}>
                       Add Product
                     </Link>
-                    <Link href="/admin/orders" onClick={handleNavClick} className="block px-2.5 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+                    <Link href="/admin/orders" onClick={handleNavClick} className={getLinkClass("/admin/orders")}>
                       Order List
                     </Link>
-                    <Link href="/admin/orders/detail" onClick={handleNavClick} className="block px-2.5 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+                    <Link href="/admin/orders/detail" onClick={handleNavClick} className={getLinkClass("/admin/orders/detail")}>
                       Order Detail
                     </Link>
                   </div>
@@ -159,27 +185,27 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
                 {openMenus.payment && (
                   <div className="pl-4 space-y-0.5 mt-0.5 border-l border-gray-200/60 ml-3">
-                    <Link href="/admin/payment" onClick={handleNavClick} className="block px-2.5 py-1.5 rounded-lg bg-gray-100/80 font-semibold text-gray-900 transition-colors">
+                    <Link href="/admin/payment" onClick={handleNavClick} className={getLinkClass("/admin/payment")}>
                       Dashboard
                     </Link>
-                    <Link href="/admin/payment/transactions" onClick={handleNavClick} className="block px-2.5 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+                    <Link href="/admin/payment/transactions" onClick={handleNavClick} className={getLinkClass("/admin/payment/transactions")}>
                       Transactions
                     </Link>
                   </div>
                 )}
               </div>
 
-              <Link href="/admin/hotel" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/admin/hotel" onClick={handleNavClick} className={getLinkClass("/admin/hotel", "px-3 py-1.5")}>
                 Hotel Dashboard
               </Link>
-              <Link href="/admin/projects" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/admin/projects" onClick={handleNavClick} className={getLinkClass("/admin/projects", "px-3 py-1.5")}>
                 Project Management
               </Link>
-              <Link href="/admin/sales" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/admin/sales" onClick={handleNavClick} className={getLinkClass("/admin/sales", "px-3 py-1.5")}>
                 Sales
               </Link>
               
-              <div className="flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <div className={`flex items-center justify-between px-3 py-1.5 rounded-lg transition-colors ${isActive("/admin/hr") ? "bg-gray-100/90 font-semibold text-gray-900 shadow-2xs" : "hover:bg-gray-100/70 text-gray-600 hover:text-gray-900"}`}>
                 <Link href="/admin/hr" onClick={handleNavClick} className="w-full">HR System</Link>
                 <span className="text-[10px] bg-emerald-50 text-emerald-600 font-semibold px-1.5 py-0.5 rounded-md border border-emerald-100">New</span>
               </div>
@@ -206,17 +232,17 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
           {openMenus.apps && (
             <div className="pl-6 space-y-0.5 mt-1 border-l border-gray-200/60 ml-4">
-              <Link href="/apps/kanban" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/apps/kanban" onClick={handleNavClick} className={getLinkClass("/apps/kanban", "px-3 py-1.5")}>
                 Kanban
               </Link>
-              <Link href="/apps/chats" onClick={handleNavClick} className="flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/apps/chats" onClick={handleNavClick} className={`flex items-center justify-between px-3 py-1.5 rounded-lg transition-colors ${isActive("/apps/chats") ? "bg-gray-100/90 font-semibold text-gray-900 shadow-2xs" : "hover:bg-gray-100/70 text-gray-600 hover:text-gray-900"}`}>
                 <span>Chats</span>
                 <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-1.5 py-0.5 rounded-full">5</span>
               </Link>
-              <Link href="/apps/mail" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/apps/mail" onClick={handleNavClick} className={getLinkClass("/apps/mail", "px-3 py-1.5")}>
                 Mail Box
               </Link>
-              <Link href="/apps/calendar" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/apps/calendar" onClick={handleNavClick} className={getLinkClass("/apps/calendar", "px-3 py-1.5")}>
                 Calendar
               </Link>
             </div>
@@ -242,10 +268,10 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
           {openMenus.aiApps && (
             <div className="pl-6 space-y-0.5 mt-1 border-l border-purple-100 ml-4">
-              <Link href="/ai/chat" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-purple-50/60 text-purple-900 font-medium transition-colors">
+              <Link href="/ai/chat" onClick={handleNavClick} className={getAiLinkClass("/ai/chat")}>
                 AI Assistant Chat
               </Link>
-              <Link href="/ai/image-generator" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-purple-50/60 text-gray-600 hover:text-purple-900 transition-colors">
+              <Link href="/ai/image-generator" onClick={handleNavClick} className={getAiLinkClass("/ai/image-generator")}>
                 Image Generator
               </Link>
             </div>
@@ -271,10 +297,10 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
           {openMenus.pages && (
             <div className="pl-6 space-y-0.5 mt-1 border-l border-gray-200/60 ml-4">
-              <Link href="/pages/users" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/pages/users" onClick={handleNavClick} className={getLinkClass("/pages/users", "px-3 py-1.5")}>
                 Users List
               </Link>
-              <Link href="/pages/profile-v1" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/pages/profile-v1" onClick={handleNavClick} className={getLinkClass("/pages/profile-v1", "px-3 py-1.5")}>
                 User Profile
               </Link>
             </div>
@@ -283,19 +309,19 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
         {/* Quick Links Section */}
         <div className="pt-3 space-y-0.5 border-t border-gray-100 mt-2">
-          <Link href="/settings" onClick={handleNavClick} className="flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium hover:bg-gray-100/70 text-gray-700 hover:text-gray-900 transition-colors">
+          <Link href="/settings" onClick={handleNavClick} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-colors ${isActive("/settings") ? "bg-gray-100/90 font-semibold text-gray-900 shadow-2xs" : "hover:bg-gray-100/70 text-gray-700 hover:text-gray-900"}`}>
             <Settings className="w-4 h-4 text-gray-500" /> Settings
           </Link>
-          <Link href="/pricing" onClick={handleNavClick} className="flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium hover:bg-gray-100/70 text-gray-700 hover:text-gray-900 transition-colors">
+          <Link href="/pricing" onClick={handleNavClick} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-colors ${isActive("/pricing") ? "bg-gray-100/90 font-semibold text-gray-900 shadow-2xs" : "hover:bg-gray-100/70 text-gray-700 hover:text-gray-900"}`}>
             <Tag className="w-4 h-4 text-gray-500" /> Pricing
           </Link>
-          <Link href="/authentication" onClick={handleNavClick} className="flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium hover:bg-gray-100/70 text-gray-700 hover:text-gray-900 transition-colors">
+          <Link href="/authentication" onClick={handleNavClick} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-colors ${isActive("/authentication") ? "bg-gray-100/90 font-semibold text-gray-900 shadow-2xs" : "hover:bg-gray-100/70 text-gray-700 hover:text-gray-900"}`}>
             <Lock className="w-4 h-4 text-gray-500" /> Authentication
           </Link>
-          <Link href="/notifications" onClick={handleNavClick} className="flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium hover:bg-gray-100/70 text-gray-700 hover:text-gray-900 transition-colors">
+          <Link href="/notifications" onClick={handleNavClick} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-colors ${isActive("/notifications") ? "bg-gray-100/90 font-semibold text-gray-900 shadow-2xs" : "hover:bg-gray-100/70 text-gray-700 hover:text-gray-900"}`}>
             <Bell className="w-4 h-4 text-gray-500" /> Notifications
           </Link>
-          <Link href="/error" onClick={handleNavClick} className="flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium hover:bg-gray-100/70 text-gray-700 hover:text-gray-900 transition-colors">
+          <Link href="/error" onClick={handleNavClick} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-colors ${isActive("/error") ? "bg-gray-100/90 font-semibold text-gray-900 shadow-2xs" : "hover:bg-gray-100/70 text-gray-700 hover:text-gray-900"}`}>
             <AlertCircle className="w-4 h-4 text-gray-500" /> Error Pages
           </Link>
         </div>
@@ -319,10 +345,10 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
           {openMenus.others && (
             <div className="pl-6 space-y-0.5 mt-1 border-l border-gray-200/60 ml-4">
-              <Link href="/widgets" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/widgets" onClick={handleNavClick} className={getLinkClass("/widgets", "px-3 py-1.5")}>
                 Widgets
               </Link>
-              <Link href="/components" onClick={handleNavClick} className="block px-3 py-1.5 rounded-lg hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/components" onClick={handleNavClick} className={getLinkClass("/components", "px-3 py-1.5")}>
                 UI Components
               </Link>
             </div>
@@ -331,7 +357,7 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
       </div>
 
-      {/* Unlock Everything Promo Card (White Version Matched with Shadcn Kit) */}
+      {/* Unlock Everything Promo Card */}
       <div className="p-4 mx-3 my-2 bg-white rounded-2xl border border-gray-100 text-xs space-y-2 shadow-2xs shrink-0">
         <p className="font-bold text-gray-900 tracking-tight">Unlock Everything</p>
         <p className="text-[11px] text-gray-500 leading-relaxed">
@@ -343,23 +369,24 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
         </button>
       </div>
 
-      {/* User Profile Footer */}
+      {/* User Profile Footer with Clerk UserButton */}
       <div className="p-3 border-t border-gray-200/80 flex items-center justify-between bg-gray-50/50 shrink-0">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-2xs">
-            TB
+          <div className="shrink-0">
+            <UserButton 
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox: "w-8 h-8 rounded-xl border border-gray-200/80 shadow-2xs"
+                }
+              }}
+            />
           </div>
           <div className="overflow-hidden leading-tight">
-            <p className="text-xs font-bold text-gray-900 truncate">Toby Belhome</p>
-            <p className="text-[10px] text-gray-500 truncate mt-0.5">hello@tobybelhome.com</p>
+            <p className="text-xs font-bold text-gray-900 truncate">{userName}</p>
+            <p className="text-[10px] text-gray-500 truncate mt-0.5">{userEmail}</p>
           </div>
         </div>
-        <button 
-          className="p-1.5 text-gray-400 hover:text-gray-900 rounded-lg hover:bg-gray-200/60 transition-colors shrink-0 cursor-pointer"
-          aria-label="User Options"
-        >
-          <MoreVertical className="w-4 h-4" />
-        </button>
       </div>
 
     </aside>
