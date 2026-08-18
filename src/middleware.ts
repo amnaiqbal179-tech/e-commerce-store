@@ -1,12 +1,22 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// Public APIs ya routes jo authentication ke bagair chalne chahiyein
+// 1. Define public routes (Jahan bina login kiye ja sakein)
 const isPublicRoute = createRouteMatcher([
-  '/',
-  '/cart',
-  '/api/coupons(.*)', // Yeh line public kar degi taake cart coupon error na de
+  "/",
+  "/cart(.*)",       
+  "/shop(.*)",       
+  "/men(.*)",
+  "/women(.*)",
+  "/category(.*)",
+  "/product(.*)",
+  "/api/products(.*)",
+  "/api/admin/payment(.*)",
+  "/api/coupons(.*)",      
+  "/sign-in(.*)",
+  "/sign-up(.*)"
 ]);
 
+// 2. Protect non-public routes (Jaise /checkout) automatically
 export default clerkMiddleware(async (auth, request) => {
   if (!isPublicRoute(request)) {
     await auth.protect();
@@ -15,9 +25,7 @@ export default clerkMiddleware(async (auth, request) => {
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?)).*)',
     '/(api|trpc)(.*)',
   ],
 };

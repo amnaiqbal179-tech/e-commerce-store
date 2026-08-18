@@ -15,6 +15,7 @@ import {
   FaCreditCard,
   FaMoneyBillWave,
   FaSearchLocation,
+  FaTag,
 } from "react-icons/fa";
 import { ImSpinner2 } from "react-icons/im";
 import Footer from "@/components/layout/Footer";
@@ -39,6 +40,11 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+
+  // Promo Code State
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [promoDiscountRate, setPromoDiscountRate] = useState(0);
 
   // Shipping Form State
   const [formData, setFormData] = useState({
@@ -68,7 +74,7 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
-  // Load selected items from LocalStorage
+  // Load selected items from LocalStorage safely
   useEffect(() => {
     const saved = localStorage.getItem("checkout_items");
     if (saved) {
@@ -76,26 +82,42 @@ export default function CheckoutPage() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setItems(parsed);
-        } else {
-          router.push("/cart");
         }
       } catch (err) {
         console.error("Failed to parse checkout items:", err);
-        router.push("/cart");
       }
-    } else {
-      router.push("/cart");
     }
-  }, [router]);
+  }, []);
 
-  // Calculations
+  // Calculations with Promo Code Support
   const subtotal = items.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
   );
-  const discount = Math.round(subtotal * 0.2); // 20% Discount
-  const deliveryFee = items.length > 0 ? 250 : 0; // Standard delivery fee in PKR (Rs. 250)
-  const totalAmount = subtotal - discount + deliveryFee;
+  const baseDiscount = Math.round(subtotal * 0.2); // 20% Standard Discount
+  const promoDiscountAmount = Math.round(subtotal * promoDiscountRate);
+  const totalDiscount = baseDiscount + promoDiscountAmount;
+
+  const deliveryFee = items.length > 0 ? (appliedPromo === "FREESHIP" ? 0 : 250) : 0;
+  const totalAmount = Math.max(0, subtotal - totalDiscount + deliveryFee);
+
+  const handleApplyPromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+
+    if (code === "SAVE10") {
+      setPromoDiscountRate(0.1); // Extra 10% discount
+      setAppliedPromo(code);
+      alert("Promo code 'SAVE10' applied successfully! Extra 10% off.");
+    } else if (code === "FREESHIP") {
+      setPromoDiscountRate(0);
+      setAppliedPromo(code);
+      alert("Promo code 'FREESHIP' applied successfully! Free delivery unlocked.");
+    } else {
+      alert("Invalid promo code. Try using 'SAVE10' or 'FREESHIP'.");
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -110,7 +132,7 @@ export default function CheckoutPage() {
     if (items.length === 0) return;
 
     if (!isSignedIn) {
-      alert("Pehlay login karna zaroori hai!");
+      alert("Please sign in to complete your order.");
       return;
     }
 
@@ -118,7 +140,7 @@ export default function CheckoutPage() {
     const phoneRegex = /^03\d{9}$/;
     const cleanPhone = formData.customerPhone.replace(/[\s-]/g, "");
     if (!phoneRegex.test(cleanPhone)) {
-      alert("Barah-e-karam sahi Pakistani mobile number likhein (e.g. 03001234567)");
+      alert("Please enter a valid Pakistani mobile number (e.g. 03001234567)");
       return;
     }
 
@@ -151,14 +173,14 @@ export default function CheckoutPage() {
           setPlacedOrderId(data.order.id);
           setOrderSuccess(true);
         } else {
-          alert(data.error || "Order place karne mein masla aya hai.");
+          alert(data.error || "Failed to place order. Please try again.");
         }
       } else {
-        alert(data.error || "Order place karne mein masla aya hai.");
+        alert(data.error || "Failed to place order. Please try again.");
       }
     } catch (error) {
       console.error("Checkout Submit Error:", error);
-      alert("Network error. Dobara koshish karein.");
+      alert("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -178,7 +200,7 @@ export default function CheckoutPage() {
                 Order Confirmed!
               </h1>
               <p className="text-black/60 text-sm mt-2">
-                Shukriya! Aapka order successfully place ho chuka hai.
+                Thank you! Your order has been placed successfully.
               </p>
             </div>
             {placedOrderId && (
@@ -233,7 +255,7 @@ export default function CheckoutPage() {
       </div>
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[100px] pb-20">
-        <div className="flex items-center justify-between mb-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between mb-8">
           <h1 className="text-black font-bold text-2xl sm:text-[32px] uppercase">
             Checkout
           </h1>
@@ -245,20 +267,7 @@ export default function CheckoutPage() {
           </Link>
         </div>
 
-        {!isSignedIn && (
-          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-amber-900">
-              <span className="font-bold">Note:</span> Order place karne ke liye aapka account mein login hona lazmi hai taake aap apni order history track kar sakien.
-            </p>
-            <SignInButton mode="modal">
-              <button className="bg-black text-white px-6 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider shrink-0 hover:bg-black/80 transition-all cursor-pointer">
-                Login / Sign Up
-              </button>
-            </SignInButton>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-8 items-start">
+        <form onSubmit={handleSubmit} className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
           {/* Left Side: Delivery Details & Payment */}
           <div className="w-full lg:flex-1 space-y-6">
             <div className="border border-black/10 rounded-[20px] p-5 sm:p-7 space-y-4 bg-white shadow-xs">
@@ -477,13 +486,13 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Right Side: Order Summary */}
+          {/* Right Side: Order Summary & Promo Code */}
           <div className="w-full lg:w-[480px] border border-black/10 rounded-[20px] p-5 sm:p-6 flex flex-col gap-6 sticky top-6 bg-white shadow-xs">
             <h2 className="font-bold text-black text-xl border-b border-black/10 pb-3">
               Order Summary ({items.length} items)
             </h2>
 
-            <div className="flex flex-col gap-4 max-h-[280px] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-4 max-h-[240px] overflow-y-auto pr-1">
               {items.map((item) => (
                 <div key={`${item.id}-${item.size || ""}-${item.color || ""}`} className="flex gap-3 items-center">
                   <div className="w-16 h-16 bg-[#F0EEED] rounded-xl relative shrink-0 overflow-hidden">
@@ -510,6 +519,36 @@ export default function CheckoutPage() {
 
             <hr className="border-black/10" />
 
+            {/* Promo Code Input Section */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold uppercase text-black/70 flex items-center gap-1.5">
+                <FaTag className="text-black/60" /> Have a Promo Code?
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value)}
+                  placeholder="e.g. SAVE10 or FREESHIP"
+                  className="flex-1 px-3.5 py-2.5 border border-black/15 rounded-xl text-xs uppercase outline-none focus:border-black transition-all bg-[#F9F9F9]"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyPromo}
+                  className="bg-black text-white px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-black/80 transition cursor-pointer"
+                >
+                  Apply
+                </button>
+              </div>
+              {appliedPromo && (
+                <p className="text-xs text-green-600 font-medium">
+                  ✓ Promo code &quot;{appliedPromo}&quot; applied successfully!
+                </p>
+              )}
+            </div>
+
+            <hr className="border-black/10" />
+
             <div className="flex flex-col gap-3 text-black/60 text-sm">
               <div className="flex justify-between">
                 <span>Subtotal</span>
@@ -517,11 +556,19 @@ export default function CheckoutPage() {
               </div>
               <div className="flex justify-between">
                 <span>Discount (-20%)</span>
-                <span className="font-bold text-[#FF3333]">-Rs. {discount.toLocaleString()}</span>
+                <span className="font-bold text-[#FF3333]">-Rs. {baseDiscount.toLocaleString()}</span>
               </div>
+              {promoDiscountAmount > 0 && (
+                <div className="flex justify-between">
+                  <span>Promo Discount</span>
+                  <span className="font-bold text-[#FF3333]">-Rs. {promoDiscountAmount.toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Delivery Fee</span>
-                <span className="font-bold text-black">Rs. {deliveryFee.toLocaleString()}</span>
+                <span className="font-bold text-black">
+                  {deliveryFee === 0 ? <span className="text-green-600">FREE</span> : `Rs. ${deliveryFee.toLocaleString()}`}
+                </span>
               </div>
             </div>
 
@@ -532,30 +579,19 @@ export default function CheckoutPage() {
               <span className="text-2xl">Rs. {totalAmount.toLocaleString()}</span>
             </div>
 
-            {isSignedIn ? (
-              <button
-                type="submit"
-                disabled={loading || items.length === 0}
-                className="w-full bg-black text-white py-4 rounded-full font-medium text-sm flex items-center justify-center gap-2 hover:bg-black/80 transition-all cursor-pointer shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <ImSpinner2 className="animate-spin text-lg" /> Processing Order...
-                  </>
-                ) : (
-                  <>Complete Order (Rs. {totalAmount.toLocaleString()})</>
-                )}
-              </button>
-            ) : (
-              <SignInButton mode="modal">
-                <button
-                  type="button"
-                  className="w-full bg-black text-white py-4 rounded-full font-medium text-sm flex items-center justify-center gap-2 hover:bg-black/80 transition-all cursor-pointer shadow-lg"
-                >
-                  Login to Complete Order
-                </button>
-              </SignInButton>
-            )}
+            <button
+              type="submit"
+              disabled={loading || items.length === 0}
+              className="w-full bg-black text-white py-4 rounded-full font-medium text-sm flex items-center justify-center gap-2 hover:bg-black/80 transition-all cursor-pointer shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <ImSpinner2 className="animate-spin text-lg" /> Processing Order...
+                </>
+              ) : (
+                <>Complete Order (Rs. {totalAmount.toLocaleString()})</>
+              )}
+            </button>
           </div>
         </form>
       </div>

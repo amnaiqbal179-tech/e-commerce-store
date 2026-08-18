@@ -125,8 +125,8 @@ export default function ReviewsSection() {
       </div>
 
       {/* Carousel Track Container with Desktop Left/Right Peeking & Blur */}
-      <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-[100px] overflow-hidden">
-        <div className="overflow-hidden w-full">
+      <div className="w-full max-w-[1440px] mx-auto pl-4 sm:pl-6 lg:pl-[100px] overflow-visible">
+        <div className="overflow-visible w-full">
           <div 
             className={`flex gap-5 ${isAnimating ? "transition-transform duration-500 ease-in-out" : ""}`}
             style={{
@@ -135,8 +135,7 @@ export default function ReviewsSection() {
             onTransitionEnd={handleTransitionEnd}
           >
             {extendedReviews.map((review, index) => {
-              // On desktop (lg), center 3 cards are visible. Left peek is index === currentIndex - 1, Right peek is index === currentIndex + 3
-              const isCenter = index >= currentIndex && index < currentIndex + 3;
+              // On desktop (lg), left peek is index === currentIndex - 1, right peek is index === currentIndex + 3
               const isLeftPeek = index === currentIndex - 1;
               const isRightPeek = index === currentIndex + 3;
               const shouldBlurDesktop = isLeftPeek || isRightPeek;
@@ -146,10 +145,12 @@ export default function ReviewsSection() {
                   key={`${review.id}-${index}`}
                   ref={index === 0 ? cardRef : null}
                   className={`w-[300px] sm:w-[350px] lg:w-[400px] flex-shrink-0 bg-white border border-black/10 rounded-[20px] p-6 lg:p-7 flex flex-col justify-between transition-all duration-300 ${
-                    shouldBlurDesktop ? "lg:opacity-40 lg:blur-[1px]" : "opacity-100"
+                    shouldBlurDesktop ? "lg:opacity-50" : "opacity-100"
                   }`}
                 >
-                  <div className="flex flex-col gap-3">
+                  <div className={`flex flex-col gap-3 transition-all duration-300 ${
+                    shouldBlurDesktop ? "lg:blur-[4px] lg:select-none" : ""
+                  }`}>
                     {/* Rating Stars */}
                     <div className="flex gap-1 text-[#FFC633]">
                       {[...Array(review.rating)].map((_, i) => (

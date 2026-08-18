@@ -112,7 +112,7 @@ export async function POST(req: Request) {
                       <span style="font-size: 13px; color: #666;">Qty: ${item.quantity} ${item.size ? `&bull; Size: ${item.size}` : ''} ${item.color ? `&bull; Color: <span style="display:inline-block;width:10px;height:10px;background:${item.color};border-radius:50%;vertical-align:middle;"></span>` : ''}</span>
                     </td>
                     <td style="padding: 15px; border-bottom: 1px solid #f0f0f0; text-align: right; font-weight: bold; font-size: 15px; color: #111; vertical-align: middle;">
-                      $${(Number(item.price) * Number(item.quantity)).toFixed(2)}
+                      Rs. ${(Number(item.price) * Number(item.quantity)).toLocaleString()}
                     </td>
                   </tr>
                 `;
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
 
               <div style="margin-top: 20px; background: #000; color: #fff; padding: 15px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 15px; font-weight: bold;">Total Amount:</span>
-                <span style="font-size: 18px; font-weight: 900;">$${Number(totalAmount).toFixed(2)}</span>
+                <span style="font-size: 18px; font-weight: 900;">Rs. ${Number(totalAmount).toLocaleString()}</span>
               </div>
 
               <div style="margin-top: 25px; background: #fff; padding: 15px; border-radius: 12px; border: 1px solid #eee;">
@@ -148,9 +148,9 @@ export async function POST(req: Request) {
         payment_method_types: ["card"],
         line_items: items.map((item: any) => ({
           price_data: {
-            currency: "usd",
+            currency: "pkr",
             product_data: { name: item.name || item.title, images: [item.image] },
-            unit_amount: Math.round(Number(item.price) * 100),
+            unit_amount: Math.round(Number(item.price)),
           },
           quantity: Number(item.quantity),
         })),

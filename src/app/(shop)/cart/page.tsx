@@ -11,7 +11,7 @@ import { FaArrowRight } from "react-icons/fa";
 import { Tag } from "lucide-react";
 import Footer from "@/components/layout/Footer";
 import { useCart } from "@/context/CartContext";
-import { useUser } from "@clerk/nextjs"; // 1. Clerk hook import kiya
+import { useUser } from "@clerk/nextjs"; // Clerk hook
 
 interface Coupon {
   id: string;
@@ -24,7 +24,7 @@ interface Coupon {
 export default function CartPage() {
   const router = useRouter();
   const { cart, addToCart, decreaseQuantity, removeFromCart } = useCart();
-  const { isSignedIn } = useUser(); // 2. User ki login state check karne ke liye
+  const { isSignedIn } = useUser(); // User ki login state check karne ke liye
 
   // Item ki unique key generate karne ke liye helper
   const getItemKey = (item: any) => `${item.id}-${item.size || ""}-${item.color || ""}`;
@@ -148,7 +148,7 @@ export default function CartPage() {
     }
   };
 
-  // Checkout redirect function (Clerk Auth Check Added)
+  // Checkout redirect function with Clerk authentication check
   const handleProceedToCheckout = () => {
     if (selectedCartItems.length === 0) {
       alert("Please select at least one item to proceed to checkout!");
@@ -163,9 +163,9 @@ export default function CartPage() {
       localStorage.removeItem("applied_coupon");
     }
 
-    // 3. Check karein ke user logged-in hai ya nahi
+    // Check karein ke user logged-in hai ya nahi
     if (!isSignedIn) {
-      // Agar logged-in nahi hai, toh Clerk ke sign-in page par bhej dein aur wapas checkout par laane ke liye redirect_url set karein
+      // Agar logged-in nahi hai, toh Clerk ke sign-in page par bhej dein aur return URL set karein
       router.push("/sign-in?redirect_url=/checkout");
       return;
     }
@@ -338,7 +338,7 @@ export default function CartPage() {
                 <span className="text-xl sm:text-2xl">${total}</span>
               </div>
 
-              {/* Available Coupons Tags Section (Admin Generated Coupons Only) */}
+              {/* Available Coupons Tags Section */}
               {availableCoupons.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <p className="text-xs font-semibold text-black/60 uppercase tracking-wider">
