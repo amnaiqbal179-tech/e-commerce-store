@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { FaCheckCircle } from "react-icons/fa";
 import Footer from "@/components/layout/Footer";
 
+export const dynamic = "force-dynamic";
+
 export default function SuccessPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order_id");
